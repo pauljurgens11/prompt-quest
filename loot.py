@@ -36,7 +36,11 @@ def earn(cfg, ledger, skills, streak_now, now):
     chests = ledger.setdefault("chests", {})
     new = []
 
+    revoked = set(ledger.get("revoked", []))  # chests you asked to have taken away; never minted again
+
     def add(cid, tier, source):
+        if cid in revoked:
+            return
         if cid in chests:
             chests[cid]["source"] = source if cid.startswith("streak-") else chests[cid]["source"]
         else:

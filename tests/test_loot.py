@@ -134,6 +134,10 @@ class LootTest(unittest.TestCase):
         self.assertEqual(ledger["coins_base_xp"], 2_800)  # coins do not jump either
         loot.earn(CFG, ledger, [skill("afk", 4_900, 22)], NO_STREAK, now=3)  # real work after it still pays
         self.assertIn("levelup-afk-22", ledger["chests"])
+        del ledger["chests"]["levelup-afk-22"]
+        ledger["revoked"] = ["levelup-afk-22"]  # you asked for it to go away
+        loot.earn(CFG, ledger, [skill("afk", 4_900, 22)], NO_STREAK, now=4)
+        self.assertNotIn("levelup-afk-22", ledger["chests"])
 
     def test_set_bonus_starts_when_the_set_is_done_and_duplicates_do_not_count(self):
         cfg = json.loads(json.dumps(CFG))
