@@ -797,6 +797,46 @@
           "orange": "#ff4fd8",
           "text": "#c9f6ff"
         }
+      },
+      {
+        "id": "charm_clover",
+        "name": "Four-Leaf Clover",
+        "icon": "🍀",
+        "rarity": "common",
+        "kind": "charm",
+        "weight": 12,
+        "chest_speed": 0.04,
+        "about": "Chests come 4% faster, forever. Always on."
+      },
+      {
+        "id": "charm_eye",
+        "name": "Evil Eye",
+        "icon": "🧿",
+        "rarity": "rare",
+        "kind": "charm",
+        "weight": 10,
+        "chest_speed": 0.06,
+        "about": "Chests come 6% faster, forever. Always on."
+      },
+      {
+        "id": "charm_dice",
+        "name": "Loaded Dice",
+        "icon": "🎲",
+        "rarity": "ultra",
+        "kind": "charm",
+        "weight": 10,
+        "chest_speed": 0.1,
+        "about": "Chests come 10% faster, forever. Always on."
+      },
+      {
+        "id": "charm_key",
+        "name": "Dragon's Key",
+        "icon": "🗝️",
+        "rarity": "extraordinary",
+        "kind": "charm",
+        "weight": 8,
+        "chest_speed": 0.15,
+        "about": "Chests come 15% faster, forever. Always on."
       }
     ],
     "coins_per_xp": 0.02,
@@ -858,9 +898,21 @@
         "half": 0.03,
         "full": 0.06,
         "aura": "#ff5fd2"
+      },
+      {
+        "id": "charms",
+        "name": "Lucky Charms",
+        "icon": "🍀",
+        "kind": "charm",
+        "skill": "all",
+        "half": 0.03,
+        "full": 0.06,
+        "aura": "#3fd16a"
       }
     ],
-    "_sets_note": "Collect every piece of a kind. Half a set gives a permanent XP bonus to one skill, the full set doubles it and unlocks a glowing aura for the panel. Bonuses start the moment you complete the stage and never run out. Duplicates still turn into coins."
+    "_sets_note": "Collect every piece of a kind. Half a set gives a permanent XP bonus to one skill, the full set doubles it and unlocks a glowing aura for the panel. Bonuses start the moment you complete the stage and never run out. Duplicates still turn into coins.",
+    "daily_min_chests": 2,
+    "_daily_note": "Any finished day with at least streak.min_day_xp XP ends with at least 2 chests; missing ones arrive after midnight."
   },
   "rewards": [
     {

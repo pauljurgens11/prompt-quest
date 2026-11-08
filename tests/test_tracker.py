@@ -257,6 +257,12 @@ class TrackerTest(unittest.TestCase):
             tracker.scan_github(fresh, tracker.Counter(cfg, fresh), "2026-11-01", cache, now=lambda: clock[0],
                                 fetch=lambda *a: self.fail("asked GitHub again"))
             self.assertEqual(fresh["days"]["2026-11-05"]["shipping"], 3)
+            # a rescan while GitHub is unreachable still counts what is cached (else Shipping drops to 0)
+            offline = {"days": {}, "seen": set()}
+            clock[0] += 600
+            tracker.scan_github(offline, tracker.Counter(cfg, offline), "2026-11-01", cache, now=lambda: clock[0],
+                                fetch=lambda *a: (_ for _ in ()).throw(OSError("offline")))
+            self.assertEqual(offline["days"]["2026-11-05"]["shipping"], 3)
         finally:
             os.environ["CLAUDE_SKILLS_GH"] = "/nonexistent/gh"
 

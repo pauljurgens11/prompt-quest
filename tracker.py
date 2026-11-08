@@ -355,6 +355,8 @@ def scan_github(st, counter, first_day, cache_path, now=time.time, fetch=gh_merg
                 for url, merged_at in fetch(gh, r.get("author", "@me"), cache["since"]):
                     cache["prs"][url] = merged_at
                 cache["since"] = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")  # search lags
+            except (OSError, subprocess.SubprocessError, ValueError):
+                pass  # offline or refused: the merges already cached below still count
             finally:
                 save_json(cache_path, cache)
         for url, merged_at in cache["prs"].items():
@@ -519,6 +521,14 @@ def daily_totals(cfg, st, since_start=False):
             for day, b in merged.items()}
 
 
+def day_of(t):
+    return datetime.fromtimestamp(t).astimezone().strftime("%Y-%m-%d")
+
+
+def end_of_day(day):
+    return datetime.fromisoformat(day + "T23:59:59").astimezone().timestamp()
+
+
 def settle_loot(cfg, st, ledger, actions, stats, now=None):
     now = now or time.time()
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
@@ -526,15 +536,18 @@ def settle_loot(cfg, st, ledger, actions, stats, now=None):
     totals = {d: x for d, x in daily_totals(cfg, st, since_start=True).items() if d >= loot_day}
     need = cfg.get("streak", {}).get("min_day_xp", 500)
     active = {d for d, x in totals.items() if x >= need}
-    held = loot.inventory(cfg, ledger, actions, now)["items"].get(loot.SHIELD, 0)  # shields come from chests, not coins
+    inv0 = loot.inventory(cfg, ledger, actions, now)
+    held = inv0["items"].get(loot.SHIELD, 0)  # shields come from chests, not coins
+    per = loot.meter_size(cfg, inv0)
     if totals:
         loot.settle_streak(ledger, active, min(totals), today, held)
     streak_now = loot.streak(ledger, active, today)
     streak_now["today_xp"], streak_now["need"] = int(totals.get(today, 0)), need
     if ledger.get("config_hash", cfg["_hash"]) != cfg["_hash"]:
-        loot.rebase(ledger, stats["skills"], cfg["loot"]["xp_per_chest"])  # a rebalance or a counting fix moves levels; it pays nothing
+        loot.rebase(ledger, stats["skills"], per)  # a rebalance or a counting fix moves levels; it pays nothing
     ledger["config_hash"] = cfg["_hash"]
-    loot.earn(cfg, ledger, stats["skills"], streak_now, now)
+    loot.earn(cfg, ledger, stats["skills"], streak_now, now, per)
+    loot.daily_floor(cfg, ledger, active, today, day_of, end_of_day)
     ledger["last_total_xp"] = stats["total_xp"]
     # coins count XP earned after loot_since: the first run after it records where XP stood
     base = ledger.setdefault("coins_base_xp", stats["total_xp"])
@@ -544,7 +557,8 @@ def settle_loot(cfg, st, ledger, actions, stats, now=None):
     inv["config"] = {k: cfg["loot"][k] for k in ("tiers", "rarities", "drops", "sets")}
     inv["skill_names"] = {s["id"]: s["name"] for s in cfg["skills"]}
     inv["shop"] = loot.shop(cfg)
-    inv["meter"] = ledger.get("meter", {"have": 0, "need": cfg["loot"]["xp_per_chest"], "upgrade": False})
+    inv["meter"] = ledger.get("meter", {"have": 0, "need": per, "upgrade": False})
+    inv["meter_base"] = cfg["loot"]["xp_per_chest"]
     inv["earned_coins"] = int(coins)
     return inv, streak_now
 

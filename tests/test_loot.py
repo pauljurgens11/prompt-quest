@@ -141,6 +141,37 @@ class LootTest(unittest.TestCase):
         loot.earn(CFG, ledger, [skill("afk", 4_900, 35)], NO_STREAK, now=4)
         self.assertNotIn("levelup-afk-35", ledger["chests"])
 
+    def test_a_worked_day_ends_with_at_least_two_chests_and_only_once(self):
+        day = {"2026-11-09": 100, "2026-11-10": 200, "2026-11-11": 300, "2026-11-12": 400}  # epoch-ish stamps per day
+        day_of = lambda t: next(d for d, s in day.items() if s <= t < s + 100)
+        ledger = {"floor_from": "2026-11-09", "chests": {
+            "meter-1": {"tier": "wooden", "t": 110},                                        # 9th: 1 earned
+            "meter-2": {"tier": "wooden", "t": 210}, "meter-3": {"tier": "wooden", "t": 220},  # 10th: 2 earned
+            "bought-1": {"tier": "gold", "t": 310}}}                                        # 11th: only bought
+        settle = lambda today: loot.daily_floor(CFG, ledger, {"2026-11-09", "2026-11-10", "2026-11-11"}, today,
+                                                day_of, lambda d: day[d] + 99)
+        settle("2026-11-12")
+        per_day = lambda d: len([c for cid, c in ledger["chests"].items() if day_of(c["t"]) == d and not cid.startswith("bought-")])
+        self.assertEqual([per_day(d) for d in ("2026-11-09", "2026-11-10", "2026-11-11")], [2, 2, 2])
+        ledger["revoked"] = ["meter-2"]
+        del ledger["chests"]["meter-2"]  # you asked for a chest from the 10th to go away
+        settle("2026-11-13")  # a later run never tops a settled day up again
+        self.assertEqual(per_day("2026-11-10"), 1)
+
+    def test_lucky_charms_shrink_the_chest_meter_for_good(self):
+        charms = [d for d in CFG["loot"]["drops"] if d["kind"] == "charm"]
+        ledger = {"chests": {f"c{i}": {"tier": "wooden", "t": 0} for i in range(len(charms))},
+                  "opened_contents": {f"c{i}": {"drop": d, "bonus_gold": 0} for i, d in enumerate(charms)}}
+        base = CFG["loot"]["xp_per_chest"]
+        inv = loot.inventory(CFG, ledger, [], now=0)
+        self.assertEqual(loot.meter_size(CFG, inv), base)
+        inv = loot.inventory(CFG, ledger, [{"action": "open", "chest": f"c{i}", "t": 1} for i in range(len(charms))], now=0)
+        per = loot.meter_size(CFG, inv)
+        self.assertEqual(per, round(base * (1 - sum(d["chest_speed"] for d in charms))))
+        earned = {}
+        loot.earn(CFG, earned, [skill("afk", 3 * per)], NO_STREAK, now=1, per=per)
+        self.assertEqual(len([c for c in earned["chests"] if c.startswith("meter-")]), 3)
+
     def test_set_bonus_starts_when_the_set_is_done_and_duplicates_do_not_count(self):
         cfg = json.loads(json.dumps(CFG))
         milks = [d for d in cfg["loot"]["drops"] if d["kind"] == "milk"]

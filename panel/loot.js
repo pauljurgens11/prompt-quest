@@ -170,6 +170,7 @@
     const before = all.filter((d) => l.owned.includes(d.id)).length, have = before + 1;
     const s0 = stageOf(before, need), s1 = stageOf(have, need);
     l.owned.push(win.id);  // optimistic, so "open next" counts it; the tracker's recount confirms
+    if (win.chest_speed) l.meter.need = Math.round(l.meter.need - l.meter_base * win.chest_speed);
     if (l.sets?.[st.id]) Object.assign(l.sets[st.id], { have, stage: s1 });
     let html = `<div class="setp">NEW! ${st.icon} ${st.name} <b>${have}/${need}</b>`;
     if (s1 > s0) {
@@ -256,7 +257,9 @@
   function setCard(st) {
     const l = L(), all = members(st), need = all.length, half = Math.ceil(need / 2);
     const have = all.filter((d) => l.owned.includes(d.id)).length, stage = stageOf(have, need), sk = skillName(st.skill);
-    const now = stage === 2 ? `<b>${pct(st.full)} ${sk} XP</b>, forever` : stage === 1 ? `<b>${pct(st.half)} ${sk} XP</b>, forever` : "nothing yet";
+    let now = stage === 2 ? `<b>${pct(st.full)} ${sk} XP</b>, forever` : stage === 1 ? `<b>${pct(st.half)} ${sk} XP</b>, forever` : "nothing yet";
+    const speed = all.filter((d) => l.owned.includes(d.id)).reduce((a, d) => a + (d.chest_speed || 0), 0);
+    if (speed) now = `<b>chests ${pct(speed)} faster</b>` + (stage ? `, ${now}` : "");
     const next = stage === 2 ? "Set complete" : stage === 1
       ? `Collect ${need - have} more for ${pct(st.full)} and a glowing panel border`
       : `Collect ${half - have} more for ${pct(st.half)} ${sk} XP`;
@@ -264,18 +267,21 @@
     const icons = all.map((d) => {
       const rc = rarity(d.rarity).color;
       if (!l.owned.includes(d.id)) return `<span class="ic miss" style="--rc:${rc}" data-name="??? · ${rarity(d.rarity).name}">❔</span>`;
-      const on = worn === d.id;
-      return `<span class="ic ${on ? "on" : ""}" style="--rc:${rc}" data-name="${d.name.replace(/^(Title|Skin): /, "")} · ${rarity(d.rarity).name}"
+      const on = worn === d.id, label = `${d.name.replace(/^(Title|Skin): /, "")} · ${rarity(d.rarity).name}`;
+      if (st.kind === "charm") return `<span class="ic on" style="--rc:${rc}" data-name="${d.name} · chests ${pct(d.chest_speed)} faster">${d.icon}</span>`;
+      return `<span class="ic ${on ? "on" : ""}" style="--rc:${rc}" data-name="${label}"
         data-act='${JSON.stringify({ action: "equip", slot: st.kind, id: on ? null : d.id })}'>${d.icon}</span>`;
     }).join("");
     const glowOn = l.equipped.aura === st.id;
     const glow = stage === 2 ? `<span class="gb sm" data-act='${JSON.stringify({ action: "equip", slot: "aura", id: glowOn ? null : st.id })}'>Glow: ${glowOn ? "on" : "off"}</span>` : "";
-    const wearing = worn ? drop(worn).name.replace(/^(Title|Skin): /, "") : "nothing";
+    const wearing = st.kind === "charm"
+      ? `A chest every ${fmt(l.meter.need)} XP` + (l.meter.need < l.meter_base ? ` (was ${fmt(l.meter_base)})` : "")
+      : "Wearing: " + (worn ? drop(worn).name.replace(/^(Title|Skin): /, "") : "nothing");
     return `<div class="set"><div class="sh"><span>${st.icon} ${st.name}</span><span class="cnt">${have}/${need}</span></div>
       <div class="sbar"><i style="width:${(100 * have / need).toFixed(0)}%"></i></div>
       <div class="bon">Gives you: ${now}</div><div class="bon">${next}</div>
       <div class="icons">${icons}</div>
-      <div class="foot"><span class="cap" data-default="Wearing: ${wearing}">Wearing: ${wearing}</span>${glow}</div></div>`;
+      <div class="foot"><span class="cap" data-default="${wearing}">${wearing}</span>${glow}</div></div>`;
   }
 
   function bagList() {

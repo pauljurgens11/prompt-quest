@@ -30,8 +30,9 @@ def pick(key, weighted):
 
 # ---- earning chests --------------------------------------------------------------------
 
-def earn(cfg, ledger, skills, streak_now, now):
-    """Add chests for new XP chunks, level milestones and streak milestones. Returns new ids."""
+def earn(cfg, ledger, skills, streak_now, now, per=None):
+    """Add chests for new XP chunks, level milestones and streak milestones. Returns new ids.
+    per: XP per meter chest (the base, shrunk by the Lucky Charms you own)."""
     lc = cfg["loot"]
     chests = ledger.setdefault("chests", {})
     new = []
@@ -53,7 +54,7 @@ def earn(cfg, ledger, skills, streak_now, now):
     levels = {s["id"]: s["level"] for s in skills}
     last_levels = ledger.setdefault("levels_at_last_chest", dict(levels))
     total = sum(s["xp"] for s in skills)
-    per = lc["xp_per_chest"]
+    per = per or lc["xp_per_chest"]
     k = ledger.get("meter_chests", 0)
     last = ledger.get("meter_last_xp", k * per)  # XP where the last meter chest dropped
     while total >= last + per:  # counts from the last chest, so changing the rate never jumps back
@@ -86,6 +87,38 @@ def earn(cfg, ledger, skills, streak_now, now):
             if streak_now["days"] >= m:
                 add(f"streak-{streak_now['start']}-{m}", "mythic" if m >= 100 else "gold", f"You kept a {m}-day streak")
     return new
+
+
+def meter_size(cfg, inv):
+    """XP per meter chest: the base, minus every Lucky Charm you own (never below 40% of it)."""
+    speed = {d["id"]: d.get("chest_speed", 0) for d in cfg["loot"]["drops"]}
+    cut = min(0.6, sum(speed.get(o, 0) for o in inv["owned"]))
+    return round(cfg["loot"]["xp_per_chest"] * (1 - cut))
+
+
+def daily_floor(cfg, ledger, active_days, today, day_of, end_of_day):
+    """Any finished day you worked ends with at least daily_min_chests chests. Each day is settled
+    once, after it ends; chests you bought or were gifted do not count towards it."""
+    need = cfg["loot"].get("daily_min_chests", 0)
+    start = ledger.setdefault("floor_from", today)  # never back-pays days before this rule existed
+    done = ledger.get("floor_until", "")
+    chests, revoked = ledger.setdefault("chests", {}), set(ledger.get("revoked", []))
+    tiers = [(t["id"], t["weight"]) for t in cfg["loot"]["tiers"]]
+    got = {}
+    for cid, c in chests.items():
+        if not cid.startswith(("bought-", "gift-")):
+            got[day_of(c["t"])] = got.get(day_of(c["t"]), 0) + 1
+    for d in sorted(active_days):
+        if not (start <= d < today and d > done):
+            continue
+        for k in range(got.get(d, 0), need):
+            cid = f"daily-{d}-{k + 1}"
+            if cid not in chests and cid not in revoked:
+                chests[cid] = {"tier": pick(cid + ":tier", tiers), "source": f"Daily minimum: you worked on {d}",
+                               "t": end_of_day(d)}
+    finished = [d for d in active_days if d < today]
+    if finished:
+        ledger["floor_until"] = max([done, *finished])
 
 
 def rebase(ledger, skills, per):
