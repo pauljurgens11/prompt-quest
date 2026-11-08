@@ -62,12 +62,13 @@ def earn(cfg, ledger, skills, streak_now, now):
             last_levels.update(levels)
         add(cid, tier, why)
     ledger["meter_chests"], ledger["meter_last_xp"] = k, last
-    for s in skills:
-        for lv in range(lc["level_chest_every"], s["level"] + 1, lc["level_chest_every"]):
-            add(f"milestone-{s['id']}-{lv}", better(pick(f"milestone-{s['id']}-{lv}", tiers)),
-                f"{s['name']} reached level {lv} (milestone)")
     every, lu = lc["level_chest_every"], lc["level_up_chest"]
-    start = ledger.setdefault("levelup_from", {})  # no chests for level-ups before this rule existed
+    start = ledger.setdefault("levelup_from", {})  # no chests for levels you had before (or got from a recount)
+    for s in skills:
+        for lv in range(every, s["level"] + 1, every):
+            if lv > start.get(s["id"], 0):
+                add(f"milestone-{s['id']}-{lv}", better(pick(f"milestone-{s['id']}-{lv}", tiers)),
+                    f"{s['name']} reached level {lv} (milestone)")
     for s in skills:
         for lv in range(start.setdefault(s["id"], s["level"]) + 1, s["level"] + 1):
             cid = f"levelup-{s['id']}-{lv}"
@@ -81,6 +82,23 @@ def earn(cfg, ledger, skills, streak_now, now):
             if streak_now["days"] >= m:
                 add(f"streak-{streak_now['start']}-{m}", "mythic" if m >= 100 else "gold", f"You kept a {m}-day streak")
     return new
+
+
+def rebase(ledger, skills, per):
+    """Levels moved because the rules or the counting changed, not because you worked.
+    Nothing is paid or taken: the chest meter and coins shift by the jump, and the levels you
+    now have give no level-up or milestone chests."""
+    total = sum(s["xp"] for s in skills)
+    prev = ledger.get("last_total_xp")
+    if prev is not None:
+        delta = total - prev
+        ledger["meter_last_xp"] = ledger.get("meter_last_xp", ledger.get("meter_chests", 0) * per) + delta
+        if "coins_base_xp" in ledger:
+            ledger["coins_base_xp"] += delta
+    start = ledger.setdefault("levelup_from", {})
+    for s in skills:
+        start[s["id"]] = max(start.get(s["id"], s["level"]), s["level"])
+    ledger["levels_at_last_chest"] = {s["id"]: s["level"] for s in skills}
 
 
 def contents(cfg, cid, tier_id):
@@ -100,7 +118,43 @@ def contents(cfg, cid, tier_id):
 
 # ---- spending: replay the panel's action log --------------------------------------------
 
-COLLECTIBLE = ("pet", "title")
+SLOTS = ("pet", "title", "milk", "watch", "skin", "aura")  # what you can equip; aura comes from a full set
+
+
+def set_members(cfg, st):
+    return [d["id"] for d in cfg["loot"]["drops"] if d["kind"] == st["kind"]]
+
+
+def set_stage(st, have, need):
+    """0 nothing, 1 half set, 2 full set; and the XP bonus that stage gives."""
+    stage = 2 if have >= need else 1 if have >= (need + 1) // 2 else 0
+    return stage, (0, st["half"], st["full"])[stage]
+
+
+def perk_multiplier(perks, skill, ts):
+    """XP multiplier from completed sets: the best stage of each set, added up."""
+    best = {}
+    for since, target, bonus, sid in perks:
+        if since <= ts and target in (skill, "all"):
+            best[sid] = max(best.get(sid, 0), bonus)
+    return 1 + sum(best.values())
+
+
+def _collect(cfg, inv, drop_id, t):
+    """You got a collectible you did not have. Unlock any set stage it completes."""
+    inv["owned"].append(drop_id)
+    for st in cfg["loot"].get("sets", []):
+        members = set_members(cfg, st)
+        if drop_id not in members:
+            continue
+        before = inv["sets"][st["id"]]["stage"]
+        have = len([m for m in members if m in inv["owned"]])
+        stage, bonus = set_stage(st, have, len(members))
+        inv["sets"][st["id"]].update(have=have, stage=stage)
+        if stage > before:
+            inv["perks"].append([t, st["skill"], bonus, st["id"]])
+        if stage == 2 and st["id"] not in inv["auras"]:
+            inv["auras"].append(st["id"])
 
 
 def shop(cfg):
@@ -121,14 +175,16 @@ def inventory(cfg, ledger, actions, now, earned_coins=0):
     rewards = {r["id"]: r for r in shop(cfg)}
     dup_gold = {r["id"]: r["duplicate_gold"] for r in lc["rarities"]}
     drops = {d["id"]: d for d in lc["drops"]}
-    inv = {"gold": int(earned_coins), "items": {}, "owned": [], "equipped": {"pet": None, "title": None},
-           "vouchers": {}, "opened": [], "boosts": [], "redeemed": []}
+    inv = {"gold": int(earned_coins), "items": {}, "owned": [], "equipped": {s: None for s in SLOTS},
+           "vouchers": {}, "opened": [], "boosts": [], "redeemed": [], "perks": [], "auras": [],
+           "sets": {st["id"]: {"have": 0, "need": len(set_members(cfg, st)), "stage": 0} for st in lc.get("sets", [])}}
+    frozen = ledger.setdefault("opened_contents", {})  # what an opened chest gave, kept when the drop table changes
     chests = dict(ledger.get("chests", {}))  # plus chests bought below
     for a in actions:
         kind, t = a.get("action"), a.get("t", 0)
         if kind == "open" and a.get("chest") in chests and a["chest"] not in inv["opened"]:
             inv["opened"].append(a["chest"])
-            got = contents(cfg, a["chest"], chests[a["chest"]]["tier"])
+            got = frozen.setdefault(a["chest"], contents(cfg, a["chest"], chests[a["chest"]]["tier"]))
             d = got["drop"]
             inv["gold"] += got["bonus_gold"]
             if d["kind"] == "gold":
@@ -140,13 +196,14 @@ def inventory(cfg, ledger, actions, now, earned_coins=0):
             elif d["id"] in inv["owned"]:
                 inv["gold"] += dup_gold[d["rarity"]]  # a collectible you already own turns into gold
             else:
-                inv["owned"].append(d["id"])
+                _collect(cfg, inv, d["id"], t)
         elif kind == "use" and a.get("item") in lc["boosts"] and inv["items"].get(a["item"], 0) > 0:
             b = lc["boosts"][a["item"]]
             inv["items"][a["item"]] -= 1
             inv["boosts"].append([t, t + b["minutes"] * 60, b["multiplier"]])
         elif kind == "equip" and a.get("slot") in inv["equipped"] and (
-                a.get("id") is None or (a["id"] in inv["owned"] and drops[a["id"]]["kind"] == a["slot"])):
+                a.get("id") is None or (a["slot"] == "aura" and a["id"] in inv["auras"])
+                or (a["id"] in inv["owned"] and drops[a["id"]]["kind"] == a["slot"])):
             inv["equipped"][a["slot"]] = a.get("id")
         elif kind == "claim" and inv["vouchers"].get(a.get("voucher"), 0) > 0:
             inv["vouchers"][a["voucher"]] -= 1

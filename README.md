@@ -16,10 +16,10 @@ leaves your machine: it only reads `~/.claude/projects/**/*.jsonl`.
 | Skill | Counts | Source |
 |---|---|---|
 | 💬 Prompting | Every message you send to Claude Code: new prompts, mid-turn corrections (interrupts count half). Longer prompts earn a bit more. Only messages Claude Code marks as typed by a human (not resume summaries, slash commands, handoffs or notifications); pasted screenshots count. | `~/.claude/projects` transcripts |
-| 💤 AFK Coding | Minutes your agents work between your messages, summed across sessions. Counts only while a turn is running (long builds and subagent waits included, up to 30 min per gap); time after an agent finishes does not count. | transcripts |
+| 💤 AFK Coding | Minutes your agents and their subagents work between your messages, summed across sessions and subagents (a main thread waiting on a subagent is not counted twice). Counts only while a turn is running (long builds and subagent waits included, up to 30 min per gap); time after an agent finishes does not count. | transcripts |
 | 🎙️ Wispr Flow | Words you dictate. Reads only word counts and times, never the text. | Wispr Flow's local database, read-only |
-| 📨 Messaging | Active minutes with Slack or WhatsApp in front (only if you touched keyboard or mouse in the last minute), plus minutes in calls: Google Meet, Zoom, Teams, huddles. A call is any app holding the microphone for over 2 minutes, so short dictations never count. | the panel samples the front app and the microphone every 15 s |
-| 🚀 Shipping | Pull requests GitHub merged with you as author. | `gh` (GitHub CLI), every 10 min |
+| 📨 Messaging | Active minutes with Slack or WhatsApp in front (only if you touched keyboard or mouse in the last minute), plus minutes in calls: Google Meet, Zoom, Teams, huddles. A call is any app holding the microphone for over 2 minutes, so short dictations never count. A call minute counts double. | the panel samples the front app and the microphone every 15 s |
+| 🚀 Shipping | Pull requests GitHub merged with you as author. Paced at 0.4: a normal day is about 50 merged PRs. | `gh` (GitHub CLI), every 10 min |
 
 ## Balance
 
@@ -34,7 +34,9 @@ leaves your machine: it only reads `~/.claude/projects/**/*.jsonl`.
 - **Unboxing**: a reel spins and lands on one drop: Common, Rare, Ultra Rare or Extraordinary. Drops: XP potions and elixirs, Streak Shields, pets, titles, coins, and real-life permissions (look out the window, a cookie, a pudding, an afternoon off). Permissions only come from chests.
 - **Coins**: 1 per 50 XP plus coin drops (chests give no bonus coins). They buy chests and big real-life rewards in the shop.
 - **Streak**: a day counts once your skills earn 500 XP together. One missed day a week is free; Streak Shields cover more.
-- Everything is deterministic: the same work always drops the same chests, and nothing can be spent twice. Earned chests live in `loot.json`, your clicks in `actions.jsonl`.
+- **Collectibles and sets**: pets, titles, milk (a glass beside your pet, up to Legendary Dragon Milk), watches (your pet wears it, up to a Richard Mille) and 8 panel skins. Each kind is a set. Half a set gives a permanent XP bonus to one skill, the full set doubles it and unlocks a glowing aura. Bonuses never run out and are never sold. Hover your panel heading to see them.
+- **Rebalances pay nothing**: when the rules or the counting change, levels move but no chests or coins are paid or taken.
+- Everything is deterministic: the same work always drops the same chests, and nothing can be spent twice. Earned chests and what each opened chest gave live in `loot.json` (so editing the drop table never changes past drops), your clicks in `actions.jsonl`.
 
 How it works inside, and how to build a variation: [BUILDING.md](BUILDING.md).
 

@@ -9,6 +9,13 @@
   const rarity = (id) => L().config.rarities.find((r) => r.id === id) || { name: "", color: "#fff" };
   const drop = (id) => L().config.drops.find((d) => d.id === id);
   const tierCfg = (id) => L().config.tiers.find((t) => t.id === id);
+  const sets = () => L().config.sets || [];
+  const members = (st) => L().config.drops.filter((d) => d.kind === st.kind);
+  const setOf = (d) => sets().find((st) => st.kind === d.kind);
+  const pct = (x) => `+${Math.round(x * 100)}%`;
+  const skillName = (id) => (id === "all" ? "every skill" : (L().skill_names || {})[id] || id);
+  // the set stage a number of pieces reaches: 0 nothing, 1 half set, 2 full set
+  const stageOf = (have, need) => (have >= need ? 2 : have >= Math.ceil(need / 2) ? 1 : 0);
 
   // ---------- sounds (all synthesized) ----------
   let ctx;
@@ -98,7 +105,7 @@
   // ---------- unboxing ----------
   function card(d, extra = "") {
     const r = rarity(d.rarity);
-    return `<div class="card ${extra}" style="--rc:${r.color}"><span class="ci">${d.icon}</span><span class="cn">${d.name.replace(/^(Permission|Voucher|Title): /, "")}</span></div>`;
+    return `<div class="card ${extra}" style="--rc:${r.color}"><span class="ci">${d.icon}</span><span class="cn">${d.name.replace(/^(Permission|Voucher|Title|Skin): /, "")}</span></div>`;
   }
   function filler(tier) {
     const odds = tierCfg(tier).odds, rs = L().config.rarities;
@@ -151,22 +158,47 @@
     })(t0);
   }
 
+  // a new collectible moves its set forward; crossing half or full unlocks a permanent bonus
+  function setProgress(win) {
+    const st = setOf(win), l = L();
+    if (!st) return { html: "" };
+    if (l.owned.includes(win.id)) {
+      const dup = l.config.rarities.find((x) => x.id === win.rarity).duplicate_gold;
+      return { html: `<div class="setp">Duplicate: <b>+${fmt(dup)} coins</b></div>` };
+    }
+    const all = members(st), need = all.length;
+    const before = all.filter((d) => l.owned.includes(d.id)).length, have = before + 1;
+    const s0 = stageOf(before, need), s1 = stageOf(have, need);
+    l.owned.push(win.id);  // optimistic, so "open next" counts it; the tracker's recount confirms
+    if (l.sets?.[st.id]) Object.assign(l.sets[st.id], { have, stage: s1 });
+    let html = `<div class="setp">NEW! ${st.icon} ${st.name} <b>${have}/${need}</b>`;
+    if (s1 > s0) {
+      const bonus = s1 === 2 ? st.full : st.half;
+      if (s1 === 2) l.auras.push(st.id);
+      return { up: true, html: html + `</div><div class="setbonus">${s1 === 2 ? "FULL SET" : "HALF SET"}! ${pct(bonus)} ${skillName(st.skill)} XP forever${s1 === 2 ? " + aura" : ""}</div>` };
+    }
+    const next = s0 === 0 ? Math.ceil(need / 2) : need;
+    return { html: html + ` · ${next - have} more for ${pct(s0 === 0 ? st.half : st.full)} ${skillName(st.skill)} XP</div>` };
+  }
+
   function reveal(win, got, r, el) {
     el.classList.add("winner", "r-" + win.rarity);
     SFX.reveal(win.rarity);
-    const res = $("result"), more = L().unopened.length - 1;
+    const res = $("result"), more = L().unopened.length - 1, sp = setProgress(win);
     let what = win.about || "";
     if (win.kind === "gold") what = `+${fmt(win.amount)} coins`;
     if (win.kind === "pet") what = "A new companion next to your panel heading. Equip it in your bag.";
+    if (win.kind === "watch" || win.kind === "milk") what = (win.about || "") + " Equip it in your bag.";
     if (win.kind === "title") what = "Replaces your panel heading. Equip it in your bag.";
     if (win.kind === "voucher" && !win.about) what = "A real-life reward. Claim it in your bag when you take it.";
     res.innerHTML = `<div class="rname r-${win.rarity}" style="color:${r.color}">${r.name}!</div>
-      <div class="big">${win.icon} ${win.name}</div><div class="what">${what}</div>
+      <div class="big">${win.icon} ${win.name}</div><div class="what">${what}</div>${sp.html}
       ${got.bonus_gold ? `<div class="bonus">+${fmt(got.bonus_gold)} bonus coins</div>` : ""}
       <div class="btns"><span class="gb" id="collect">Collect</span>${more > 0 ? `<span class="gb alt" id="nextC">Open next (${more})</span>` : ""}</div>`;
     res.classList.add("show");
     if (win.rarity === "extraordinary" || win.rarity === "ultra") confetti(win.rarity === "extraordinary" ? 90 : 40, r.color);
     if (got.bonus_gold || win.kind === "gold") setTimeout(() => SFX.coin(4), 500);
+    if (sp.up) { setTimeout(() => { SFX.reveal("extraordinary"); confetti(70, "#ffe14a"); }, 1100); }
     const done = () => { busy = false; closeOverlay(); };
     $("collect").onclick = done;
     if ($("nextC")) $("nextC").onclick = () => { busy = false; const nx = L().unopened.find((c) => c.id !== lastOpened); if (nx) unbox(nx); else done(); };
@@ -227,9 +259,17 @@
       return rows.join("") || `<div class="empty">Nothing yet. Open chests to fill your bag.</div>`;
     }
     if (tab === "collection") {
-      return ["pet", "title"].map((slot) => {
-        const all = l.config.drops.filter((d) => d.kind === slot);
-        return `<div class="sec">${{ pet: "Pets", title: "Titles" }[slot]} · ${all.filter((d) => l.owned.includes(d.id)).length}/${all.length}</div>` +
+      const auras = sets().filter((st) => l.auras.includes(st.id)).map((st) => {
+        const on = l.equipped.aura === st.id, d = { icon: "✨", name: `Aura: ${st.name}`, rarity: "extraordinary" };
+        return rowH(d, btn(on ? "Unequip" : "Equip", { action: "equip", slot: "aura", id: on ? null : st.id }), "Full-set reward: your panel glows");
+      }).join("");
+      return (auras ? `<div class="sec">Auras</div>${auras}` : "") + sets().map((st) => {
+        const slot = st.kind, all = members(st), have = all.filter((d) => l.owned.includes(d.id)).length;
+        const half = Math.ceil(all.length / 2), stage = stageOf(have, all.length);
+        const mark = (n, on) => `<span class="${on ? "ok" : ""}">${on ? "✓" : "○"} ${n}:</span>`;
+        return `<div class="sec">${st.icon} ${st.name} · ${have}/${all.length}
+            <small>${mark(half, stage >= 1)} ${pct(st.half)} ${skillName(st.skill)} XP forever · ${mark(all.length, stage >= 2)} ${pct(st.full)} + aura</small></div>
+          <div class="sbar"><i style="width:${(100 * have / all.length).toFixed(0)}%"></i></div>` +
           all.map((d) => {
             if (!l.owned.includes(d.id)) return `<div class="it locked" style="--rc:${rarity(d.rarity).color}"><span class="ii">❔</span><span class="in">???<small>${rarity(d.rarity).name}</small></span></div>`;
             const on = l.equipped[slot] === d.id;
@@ -282,6 +322,16 @@
     render(stats) { S = stats; if (!S.loot) return; bar(); tray(); },
     equipped: () => S?.loot?.equipped || {},
     drop,
+    rarityColor: (id) => rarity(id).color,
+    auraColor: (id) => (sets().find((st) => st.id === id) || {}).aura,
+    bonusInfo() {
+      const l = L(), lines = sets().map((st) => {
+        const g = l.sets?.[st.id] || { have: 0, need: members(st).length, stage: 0 };
+        const now = g.stage === 2 ? pct(st.full) : g.stage === 1 ? pct(st.half) : "none yet";
+        return `<div class="row"><span>${st.icon} ${st.name} ${g.have}/${g.need}</span><span>${now}${g.stage ? " " + skillName(st.skill) : ""}</span></div>`;
+      }).join("");
+      return `<div class="name">Set bonuses</div>${lines}<div class="about">Half a set gives permanent bonus XP, a full set doubles it and adds an aura. Collect in chests.</div>`;
+    },
     open: openBag,
   };
 })();

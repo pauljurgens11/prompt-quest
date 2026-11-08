@@ -110,7 +110,45 @@ class LootTest(unittest.TestCase):
         inv = loot.inventory(CFG, ledger, [{"action": "open", "chest": cid},
                                            {"action": "equip", "slot": "title", "id": pet["id"]},
                                            {"action": "equip", "slot": "pet", "id": pet["id"]}], now=0)
-        self.assertEqual(inv["equipped"], {"pet": pet["id"], "title": None})
+        self.assertEqual((inv["equipped"]["pet"], inv["equipped"]["title"]), (pet["id"], None))
+
+    def test_an_opened_chest_keeps_its_drop_when_the_drop_table_changes(self):
+        ledger = self.big_ledger()
+        cid, d = first_with(ledger, kind="voucher")
+        acts = [{"action": "open", "chest": cid}]
+        loot.inventory(CFG, ledger, acts, now=0)
+        changed = json.loads(json.dumps(CFG))
+        changed["loot"]["drops"] = [x for x in changed["loot"]["drops"] if x["id"] != d["id"]]  # new items, new odds
+        inv = loot.inventory(changed, ledger, acts, now=0)
+        self.assertEqual(inv["vouchers"].get(d["id"]), 1)
+
+    def test_a_recount_moves_levels_but_pays_no_chests(self):
+        ledger = {}
+        loot.earn(CFG, ledger, [skill("afk", 1_600, 12)], NO_STREAK, now=1)
+        ledger["last_total_xp"], ledger["coins_base_xp"] = 1_600, 0
+        before = set(ledger["chests"])
+        jumped = [skill("afk", 4_400, 21)]  # the counting got fixed: same work, higher level
+        loot.rebase(ledger, jumped, CFG["loot"]["xp_per_chest"])
+        loot.earn(CFG, ledger, jumped, NO_STREAK, now=2)
+        self.assertEqual(set(ledger["chests"]), before)
+        self.assertEqual(ledger["coins_base_xp"], 2_800)  # coins do not jump either
+        loot.earn(CFG, ledger, [skill("afk", 4_900, 22)], NO_STREAK, now=3)  # real work after it still pays
+        self.assertIn("levelup-afk-22", ledger["chests"])
+
+    def test_set_bonus_starts_when_the_set_is_done_and_duplicates_do_not_count(self):
+        cfg = json.loads(json.dumps(CFG))
+        milks = [d for d in cfg["loot"]["drops"] if d["kind"] == "milk"]
+        ledger = {"chests": {f"c{i}": {"tier": "wooden", "t": 0} for i in range(5)},
+                  "opened_contents": {f"c{i}": {"drop": milks[i], "bonus_gold": 0} for i in range(4)}}
+        ledger["opened_contents"]["c4"] = {"drop": milks[0], "bonus_gold": 0}  # a duplicate
+        acts = lambda *ids: [{"action": "open", "chest": f"c{i}", "t": 100 * (n + 1)} for n, i in enumerate(ids)]
+        inv = loot.inventory(cfg, ledger, acts(0, 4, 1), now=0)  # two different milks: half set at t=300
+        self.assertEqual(loot.perk_multiplier(inv["perks"], "wispr", 299), 1)
+        self.assertAlmostEqual(loot.perk_multiplier(inv["perks"], "wispr", 300), 1.05)
+        self.assertEqual(loot.perk_multiplier(inv["perks"], "afk", 300), 1)
+        inv = loot.inventory(cfg, ledger, acts(0, 1, 2, 3) + [{"action": "equip", "slot": "aura", "id": "milk"}], now=0)
+        self.assertAlmostEqual(loot.perk_multiplier(inv["perks"], "wispr", 400), 1.10)  # full replaces half
+        self.assertEqual(inv["equipped"]["aura"], "milk")
 
 
 class StreakTest(unittest.TestCase):

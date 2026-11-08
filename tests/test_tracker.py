@@ -154,6 +154,22 @@ class TrackerTest(unittest.TestCase):
         self.rig.write("p/s1.jsonl", lines)
         self.assertAlmostEqual(self.rig.raw()["afk"], (30 + 29 + 20 + 600 + 1800) / 60, places=3)
 
+    def test_subagents_count_their_own_work_and_a_wait_on_them_is_not_counted_twice(self):
+        at = lambda ln, hhmmss: ln.replace(TS.format(0), f"2026-11-05T{hhmmss}.000Z")
+        sub = lambda ln: ln.replace('"isSidechain":false', '"isSidechain":true')
+        self.rig.write("p/s1.jsonl", [
+            at(user(0, "go"), "10:00:00"),
+            at(tool(0, "Agent", tid="a1", uid=1), "10:00:10"),               # 10s, then waits on the subagent
+            at(user(0, [{"type": "tool_result", "tool_use_id": "a1", "content": "ok"}], origin=None, uid=2), "10:20:10"),
+            at(tool(0, "Read", tid="r1", uid=3), "10:20:40"),                # +30s
+        ])
+        self.rig.write("p/s1/subagents/agent-x.jsonl", [
+            sub(at(user(0, "brief", origin=None, uid=10), "10:00:10")),
+            sub(at(tool(0, "Bash", tid="b1", uid=11), "10:10:10")),          # 10 min of subagent work
+            sub(at(tool(0, "Read", tid="b2", uid=12), "10:20:00")),          # +590s
+        ])
+        self.assertAlmostEqual(self.rig.raw()["afk"], (10 + 30 + 600 + 590) / 60, places=3)
+
     def test_grinding_one_day_cannot_outweigh_regular_days(self):
         bal = json.loads((ROOT / "skills.json").read_text())["balance"]
         self.assertEqual(tracker.day_xp(10, 10, bal), bal["xp_per_typical_day"])
@@ -206,14 +222,15 @@ class TrackerTest(unittest.TestCase):
         self.assertEqual(self.rig.raw()["wispr"], 65)
         self.assertEqual(self.rig.raw()["wispr"], 65)  # third run: nothing new, nothing doubled
 
-    def test_messaging_counts_only_slack_and_whatsapp_time(self):
+    def test_messaging_counts_slack_and_whatsapp_time_and_calls_double(self):
         self.rig.paths.data.mkdir(parents=True, exist_ok=True)
         t = 1793872800  # 2026-11-05 10:00 UTC
-        samples = [("com.tinyspeck.slackmacgap", 15)] * 4 + [("net.whatsapp.WhatsApp", 15)] * 2 + [("com.apple.Safari", 15)] * 8
+        samples = [("com.tinyspeck.slackmacgap", 15)] * 4 + [("net.whatsapp.WhatsApp", 15)] * 2 + [("com.apple.Safari", 15)] * 8 \
+            + [("meeting", 60)]
         with self.rig.paths.activity.open("w") as fh:
             for i, (app, sec) in enumerate(samples):
                 fh.write(json.dumps({"t": t + 15 * i, "app": app, "s": sec}) + "\n")
-        self.assertAlmostEqual(self.rig.raw()["messaging"], 1.5)  # 6 samples x 15s
+        self.assertAlmostEqual(self.rig.raw()["messaging"], 1.5 + 2)  # 6 samples x 15s, plus a call minute counts double
 
     def test_shipping_counts_each_merged_pr_once_across_rereads(self):
         cfg = tracker.load_config(self.rig.paths.config)

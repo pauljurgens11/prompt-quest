@@ -45,6 +45,7 @@ NOT_HUMAN = (
 INTERRUPT = "[Request interrupted by user"
 ORIGIN_SINCE = (2, 1, 255)
 TURN_END = ("end_turn", "stop_sequence")
+AGENT_TOOLS = ("Agent", "Task")
 
 
 class Paths:
@@ -165,6 +166,7 @@ class Counter:
         self.since = datetime.fromisoformat(since).timestamp() if since else None
         self.ts = 0.0  # timestamp of the event being counted
         self.boosts = []  # [start, end, multiplier] of XP potions and elixirs you used
+        self.perks = []  # [since, skill or "all", bonus, set id] from collection sets you completed
 
 
     def first_time(self, key):
@@ -180,6 +182,7 @@ class Counter:
         if self.since is not None and self.ts < self.since:
             day = "pre:" + day  # learns your typical day, earns no XP
         amount *= max([m for a, b, m in self.boosts if a <= self.ts < b], default=1)
+        amount *= loot.perk_multiplier(self.perks, skill, self.ts)
         if amount > 0:
             bucket = self.days.setdefault(day, {})
             bucket[skill] = round(bucket.get(skill, 0) + amount, 4)
@@ -246,14 +249,21 @@ def handle(d, fstate, counter):
                 counter.prompt(day, *who)
             fstate["prev_ts"], fstate["idle"] = ts, False  # your typing time is not agent time
             return
-    # agent time: main-thread events only (subagents run in parallel), each line once.
-    # A gap after the agent ended its turn is waiting, not work, whatever wakes it next.
-    if not d.get("isSidechain"):
+    # agent time: each agent's own stream, each line once. A subagent writes its own file
+    # (<session>/subagents/agent-*.jsonl) and counts there; a main thread waiting on a
+    # foreground subagent does not count the same minutes again. A gap after an agent ended
+    # its turn is waiting, not work, whatever wakes it next.
+    if not d.get("isSidechain") or fstate.get("sub"):
         prev = fstate.get("prev_ts")
-        if prev is not None and ts > prev and counter.first_time(d.get("uuid")) and not fstate.get("idle"):
+        if (prev is not None and ts > prev and counter.first_time(d.get("uuid"))
+                and not fstate.get("idle") and not fstate.get("on_agent")):
             counter.busy(day, ts - prev)
         fstate["prev_ts"] = ts
-        fstate["idle"] = typ == "assistant" and (d.get("message") or {}).get("stop_reason") in TURN_END
+        msg = d.get("message") or {}
+        fstate["idle"] = typ == "assistant" and msg.get("stop_reason") in TURN_END
+        fstate["on_agent"] = typ == "assistant" and any(
+            isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") in AGENT_TOOLS
+            and not (b.get("input") or {}).get("run_in_background") for b in msg.get("content") or [])
     if typ == "assistant":
         for b in (d.get("message") or {}).get("content") or []:
             if isinstance(b, dict) and b.get("type") == "tool_use" and counter.first_time(b.get("id")):
@@ -266,6 +276,7 @@ MARKERS = (b'"type":"user"', b'"type":"assistant"', b'"queued_command"')
 def scan_file(path, fstate, counter):
     size = path.stat().st_size
     off = fstate.get("off", 0)
+    fstate["sub"] = path.parent.name == "subagents"
     if size < off:
         off, fstate["prev_ts"] = 0, None
     if size == off:
@@ -402,6 +413,11 @@ def calibrate(cfg, st):
         st["calib"][sid] = {"typical": typical or 1, "frozen": len(vals) >= need}
 
 
+def typical_for(s, st):
+    """Raw amount worth one normal day. pace < 1 makes a skill level slower, > 1 faster."""
+    return st["calib"][s["id"]]["typical"] / s.get("pace", 1)
+
+
 def day_xp(raw, typical, bal):
     r = raw / typical
     cap = bal["grind_soft_cap"]
@@ -428,7 +444,7 @@ def build_stats(cfg, st):
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
     out = []
     for s in cfg["skills"]:
-        sid, typical = s["id"], st["calib"][s["id"]]["typical"]
+        sid, typical = s["id"], typical_for(s, st)
         xp = today_xp = 0.0
         for day, bucket in st["days"].items():
             if day.startswith("pre:"):
@@ -443,7 +459,7 @@ def build_stats(cfg, st):
             "about": s.get("about", ""), "xp": int(xp), "level": lv, "level_xp": table[lv],
             "next_xp": table[lv + 1] if lv + 1 < len(table) else None,
             "today_xp": int(today_xp), "today_raw": round(st["days"].get(today, {}).get(sid, 0), 1),
-            "typical_day": round(typical, 2),
+            "typical_day": round(typical, 2), "pace": s.get("pace", 1),
         })
     return {
         "updated": datetime.now(timezone.utc).isoformat(),
@@ -461,7 +477,8 @@ def run(paths):
     counter = Counter(cfg, st)
     paths.data.mkdir(parents=True, exist_ok=True)
     ledger, actions = loot.load(paths.loot), loot.load_actions(paths.actions)
-    counter.boosts = loot.inventory(cfg, ledger, actions, time.time())["boosts"]
+    inv = loot.inventory(cfg, ledger, actions, time.time())
+    counter.boosts, counter.perks = inv["boosts"], inv["perks"]
     present = set()
     for path in sorted(paths.projects.rglob("*.jsonl")):
         present.add(str(path))
@@ -498,7 +515,7 @@ def daily_totals(cfg, st, since_start=False):
         day = merged.setdefault(key.removeprefix("pre:"), {})
         for k, v in bucket.items():
             day[k] = day.get(k, 0) + v
-    return {day: sum(day_xp(b.get(s["id"], 0), st["calib"][s["id"]]["typical"], cfg["balance"]) for s in cfg["skills"])
+    return {day: sum(day_xp(b.get(s["id"], 0), typical_for(s, st), cfg["balance"]) for s in cfg["skills"])
             for day, b in merged.items()}
 
 
@@ -514,13 +531,18 @@ def settle_loot(cfg, st, ledger, actions, stats, now=None):
         loot.settle_streak(ledger, active, min(totals), today, held)
     streak_now = loot.streak(ledger, active, today)
     streak_now["today_xp"], streak_now["need"] = int(totals.get(today, 0)), need
+    if ledger.get("config_hash", cfg["_hash"]) != cfg["_hash"]:
+        loot.rebase(ledger, stats["skills"], cfg["loot"]["xp_per_chest"])  # a rebalance or a counting fix moves levels; it pays nothing
+    ledger["config_hash"] = cfg["_hash"]
     loot.earn(cfg, ledger, stats["skills"], streak_now, now)
+    ledger["last_total_xp"] = stats["total_xp"]
     # coins count XP earned after loot_since: the first run after it records where XP stood
     base = ledger.setdefault("coins_base_xp", stats["total_xp"])
     coins = max(0, stats["total_xp"] - base) * cfg["loot"].get("coins_per_xp", 0)
     inv = loot.inventory(cfg, ledger, actions, now, earned_coins=coins)
     inv["chest_contents"] = {c["id"]: loot.contents(cfg, c["id"], c["tier"]) for c in inv["unopened"]}
-    inv["config"] = {k: cfg["loot"][k] for k in ("tiers", "rarities", "drops")}
+    inv["config"] = {k: cfg["loot"][k] for k in ("tiers", "rarities", "drops", "sets")}
+    inv["skill_names"] = {s["id"]: s["name"] for s in cfg["skills"]}
     inv["shop"] = loot.shop(cfg)
     inv["meter"] = ledger.get("meter", {"have": 0, "need": cfg["loot"]["xp_per_chest"], "upgrade": False})
     inv["earned_coins"] = int(coins)

@@ -41,7 +41,7 @@
       "id": "afk",
       "name": "AFK Coding",
       "icon": "💤",
-      "about": "Minutes your agents work on their own between your messages.",
+      "about": "Minutes your agents and their subagents work on their own between your messages.",
       "rules": [
         {
           "afk_minutes": true,
@@ -64,11 +64,15 @@
       "id": "messaging",
       "name": "Messaging",
       "icon": "📨",
-      "about": "Active minutes with Slack or WhatsApp in front (idle time does not count), plus minutes in calls: Meet, Zoom, Teams, huddles (any app holding the microphone over 2 minutes).",
+      "about": "Active minutes with Slack or WhatsApp in front (idle time does not count), plus minutes in calls: Meet, Zoom, Teams, huddles (any app holding the microphone over 2 minutes). A call minute counts double.",
       "rules": [
         {
-          "app_minutes": "(?i)slack|whatsapp|^meeting$",
+          "app_minutes": "(?i)slack|whatsapp",
           "default_typical": 60
+        },
+        {
+          "app_minutes": "^meeting$",
+          "weight": 2
         }
       ]
     },
@@ -83,7 +87,9 @@
           "author": "@me",
           "check_every_minutes": 10
         }
-      ]
+      ],
+      "pace": 0.4,
+      "_pace_note": "0.4: a normal day is about 50 merged PRs (the median was 19 back in September, so every day hit the cap)"
     }
   ],
   "xp_since": "2026-11-05T21:56:46+02:00",
@@ -561,6 +567,236 @@
         "kind": "voucher",
         "weight": 15,
         "about": "Cinema, snacks, the whole thing."
+      },
+      {
+        "id": "milk_farm",
+        "name": "Farm Milk",
+        "icon": "🥛",
+        "rarity": "common",
+        "kind": "milk",
+        "weight": 15,
+        "about": "Fresh from the farm. A glass next to your pet."
+      },
+      {
+        "id": "milk_goat",
+        "name": "Goat Milk",
+        "icon": "🥛",
+        "rarity": "rare",
+        "kind": "milk",
+        "weight": 12,
+        "about": "Tangy, rare, respected."
+      },
+      {
+        "id": "milk_unicorn",
+        "name": "Unicorn Milk",
+        "icon": "🥛",
+        "rarity": "ultra",
+        "kind": "milk",
+        "weight": 12,
+        "about": "Shimmers faintly. Nobody asks where it came from."
+      },
+      {
+        "id": "milk_dragon",
+        "name": "Legendary Dragon Milk",
+        "icon": "🥛",
+        "rarity": "extraordinary",
+        "kind": "milk",
+        "weight": 10,
+        "about": "The best milk there is. Still warm."
+      },
+      {
+        "id": "watch_casio",
+        "name": "Casio F-91W",
+        "icon": "⌚",
+        "rarity": "common",
+        "kind": "watch",
+        "weight": 15,
+        "about": "The classic. Your pet wears it."
+      },
+      {
+        "id": "watch_prx",
+        "name": "Tissot PRX",
+        "icon": "⌚",
+        "rarity": "rare",
+        "kind": "watch",
+        "weight": 12,
+        "about": "Integrated bracelet. Your pet is getting ideas."
+      },
+      {
+        "id": "watch_sub",
+        "name": "Rolex Submariner",
+        "icon": "⌚",
+        "rarity": "ultra",
+        "kind": "watch",
+        "weight": 10,
+        "about": "Your pet now checks the time a lot."
+      },
+      {
+        "id": "watch_rm",
+        "name": "Richard Mille RM 011",
+        "icon": "⌚",
+        "rarity": "extraordinary",
+        "kind": "watch",
+        "weight": 8,
+        "about": "Ultra drip. Your pet refuses to take it off."
+      },
+      {
+        "id": "skin_moss",
+        "name": "Skin: Mossy Ruins",
+        "icon": "🌿",
+        "rarity": "common",
+        "kind": "skin",
+        "weight": 10,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#4f6b43",
+          "stone": "#36502f",
+          "stone-end": "#2c4227",
+          "stone-lo": "#18240f",
+          "tile-hi": "#476039",
+          "tile": "#2c4024",
+          "tile-end": "#22331c",
+          "tile-lo": "#111a0b"
+        }
+      },
+      {
+        "id": "skin_sand",
+        "name": "Skin: Desert Sandstone",
+        "icon": "🏜️",
+        "rarity": "common",
+        "kind": "skin",
+        "weight": 10,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#a08355",
+          "stone": "#7d6440",
+          "stone-end": "#6a5434",
+          "stone-lo": "#3b2d17",
+          "tile-hi": "#8a7048",
+          "tile": "#5f4b2e",
+          "tile-end": "#4f3e25",
+          "tile-lo": "#2a1f10"
+        }
+      },
+      {
+        "id": "skin_frost",
+        "name": "Skin: Frostbound",
+        "icon": "🧊",
+        "rarity": "rare",
+        "kind": "skin",
+        "weight": 8,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#6f8fa8",
+          "stone": "#4a6a84",
+          "stone-end": "#3d5a72",
+          "stone-lo": "#1c2c3a",
+          "tile-hi": "#5a7a94",
+          "tile": "#365166",
+          "tile-end": "#2b4255",
+          "tile-lo": "#14212c",
+          "orange": "#9fe3ff"
+        }
+      },
+      {
+        "id": "skin_obsidian",
+        "name": "Skin: Obsidian",
+        "icon": "🌑",
+        "rarity": "rare",
+        "kind": "skin",
+        "weight": 8,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#3a3a44",
+          "stone": "#24242c",
+          "stone-end": "#1c1c22",
+          "stone-lo": "#0a0a0d",
+          "tile-hi": "#33333d",
+          "tile": "#1d1d24",
+          "tile-end": "#16161b",
+          "tile-lo": "#050507"
+        }
+      },
+      {
+        "id": "skin_volcanic",
+        "name": "Skin: Volcanic",
+        "icon": "🌋",
+        "rarity": "ultra",
+        "kind": "skin",
+        "weight": 8,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#7a3a22",
+          "stone": "#552414",
+          "stone-end": "#461c0f",
+          "stone-lo": "#200a04",
+          "tile-hi": "#6a2e1a",
+          "tile": "#43190c",
+          "tile-end": "#361309",
+          "tile-lo": "#180602",
+          "orange": "#ffb347"
+        }
+      },
+      {
+        "id": "skin_abyss",
+        "name": "Skin: Abyssal",
+        "icon": "🔮",
+        "rarity": "ultra",
+        "kind": "skin",
+        "weight": 8,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#5a3d7a",
+          "stone": "#3b2556",
+          "stone-end": "#2f1d46",
+          "stone-lo": "#150a24",
+          "tile-hi": "#4c3368",
+          "tile": "#2c1a42",
+          "tile-end": "#231436",
+          "tile-lo": "#0f0619",
+          "orange": "#d9a3ff"
+        }
+      },
+      {
+        "id": "skin_gilded",
+        "name": "Skin: Gilded Throne",
+        "icon": "👑",
+        "rarity": "extraordinary",
+        "kind": "skin",
+        "weight": 8,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#b8902e",
+          "stone": "#8a6a1c",
+          "stone-end": "#735714",
+          "stone-lo": "#3d2c06",
+          "tile-hi": "#a07c24",
+          "tile": "#6e5412",
+          "tile-end": "#5b450d",
+          "tile-lo": "#2e2104",
+          "orange": "#fff1a8"
+        }
+      },
+      {
+        "id": "skin_void",
+        "name": "Skin: Neon Void",
+        "icon": "🌌",
+        "rarity": "extraordinary",
+        "kind": "skin",
+        "weight": 8,
+        "about": "A new look for the whole panel. Equip it in your bag.",
+        "vars": {
+          "stone-hi": "#1d2a4a",
+          "stone": "#101833",
+          "stone-end": "#0b1228",
+          "stone-lo": "#000000",
+          "tile-hi": "#182447",
+          "tile": "#0c1430",
+          "tile-end": "#08102a",
+          "tile-lo": "#02040f",
+          "orange": "#ff4fd8",
+          "text": "#c9f6ff"
+        }
       }
     ],
     "coins_per_xp": 0.02,
@@ -571,7 +807,60 @@
       "iron": 400,
       "gold": 1200,
       "mythic": 5000
-    }
+    },
+    "sets": [
+      {
+        "id": "menagerie",
+        "name": "Menagerie",
+        "icon": "🐾",
+        "kind": "pet",
+        "skill": "afk",
+        "half": 0.05,
+        "full": 0.1,
+        "aura": "#7fe3ff"
+      },
+      {
+        "id": "titles",
+        "name": "Hall of Titles",
+        "icon": "🏷️",
+        "kind": "title",
+        "skill": "prompting",
+        "half": 0.05,
+        "full": 0.1,
+        "aura": "#ff9a1f"
+      },
+      {
+        "id": "milk",
+        "name": "Milk Bar",
+        "icon": "🥛",
+        "kind": "milk",
+        "skill": "wispr",
+        "half": 0.05,
+        "full": 0.1,
+        "aura": "#f4f8ff"
+      },
+      {
+        "id": "watches",
+        "name": "Wrist Game",
+        "icon": "⌚",
+        "kind": "watch",
+        "skill": "messaging",
+        "half": 0.05,
+        "full": 0.1,
+        "aura": "#ffd84a"
+      },
+      {
+        "id": "wardrobe",
+        "name": "Wardrobe",
+        "icon": "🎨",
+        "kind": "skin",
+        "skill": "all",
+        "half": 0.03,
+        "full": 0.06,
+        "aura": "#ff5fd2"
+      }
+    ],
+    "_sets_note": "Collect every piece of a kind. Half a set gives a permanent XP bonus to one skill, the full set doubles it and unlocks a glowing aura for the panel. Bonuses start the moment you complete the stage and never run out. Duplicates still turn into coins."
   },
   "rewards": [
     {
