@@ -239,10 +239,44 @@
     ov.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { tab = t.dataset.tab; confirmBuy = null; paintBag(); }));
     $("bagX").onclick = closeOverlay;
     ov.querySelectorAll("[data-act]").forEach((b) => (b.onclick = () => act(JSON.parse(b.dataset.act), b)));
+    ov.querySelectorAll(".set").forEach((set) => {  // hovering a piece names it in its card
+      const cap = set.querySelector(".cap");
+      set.querySelectorAll(".ic").forEach((ic) => {
+        ic.onmouseenter = () => (cap.textContent = ic.dataset.name);
+        ic.onmouseleave = () => (cap.textContent = cap.dataset.default);
+      });
+    });
   }
   const btn = (label, a, dis = false) => `<span class="gb sm ${dis ? "dis" : ""}" ${dis ? "" : `data-act='${JSON.stringify(a)}'`}>${label}</span>`;
   const rowH = (d, right, sub = "") => `<div class="it" style="--rc:${rarity(d.rarity).color}"><span class="ii">${d.icon}</span>
       <span class="in">${d.name}<small>${sub}</small></span>${right}</div>`;
+
+  // one card per set: what it gives you now, what the next pieces give, and every piece as an icon.
+  // Click an owned piece to wear it (again to take it off); missing pieces show as ❔ in their rarity colour.
+  function setCard(st) {
+    const l = L(), all = members(st), need = all.length, half = Math.ceil(need / 2);
+    const have = all.filter((d) => l.owned.includes(d.id)).length, stage = stageOf(have, need), sk = skillName(st.skill);
+    const now = stage === 2 ? `<b>${pct(st.full)} ${sk} XP</b>, forever` : stage === 1 ? `<b>${pct(st.half)} ${sk} XP</b>, forever` : "nothing yet";
+    const next = stage === 2 ? "Set complete" : stage === 1
+      ? `Collect ${need - have} more for ${pct(st.full)} and a glowing panel border`
+      : `Collect ${half - have} more for ${pct(st.half)} ${sk} XP`;
+    const worn = l.equipped[st.kind];
+    const icons = all.map((d) => {
+      const rc = rarity(d.rarity).color;
+      if (!l.owned.includes(d.id)) return `<span class="ic miss" style="--rc:${rc}" data-name="??? · ${rarity(d.rarity).name}">❔</span>`;
+      const on = worn === d.id;
+      return `<span class="ic ${on ? "on" : ""}" style="--rc:${rc}" data-name="${d.name.replace(/^(Title|Skin): /, "")} · ${rarity(d.rarity).name}"
+        data-act='${JSON.stringify({ action: "equip", slot: st.kind, id: on ? null : d.id })}'>${d.icon}</span>`;
+    }).join("");
+    const glowOn = l.equipped.aura === st.id;
+    const glow = stage === 2 ? `<span class="gb sm" data-act='${JSON.stringify({ action: "equip", slot: "aura", id: glowOn ? null : st.id })}'>Glow: ${glowOn ? "on" : "off"}</span>` : "";
+    const wearing = worn ? drop(worn).name.replace(/^(Title|Skin): /, "") : "nothing";
+    return `<div class="set"><div class="sh"><span>${st.icon} ${st.name}</span><span class="cnt">${have}/${need}</span></div>
+      <div class="sbar"><i style="width:${(100 * have / need).toFixed(0)}%"></i></div>
+      <div class="bon">Gives you: ${now}</div><div class="bon">${next}</div>
+      <div class="icons">${icons}</div>
+      <div class="foot"><span class="cap" data-default="Wearing: ${wearing}">Wearing: ${wearing}</span>${glow}</div></div>`;
+  }
 
   function bagList() {
     const l = L();
@@ -258,25 +292,7 @@
       }
       return rows.join("") || `<div class="empty">Nothing yet. Open chests to fill your bag.</div>`;
     }
-    if (tab === "collection") {
-      const auras = sets().filter((st) => l.auras.includes(st.id)).map((st) => {
-        const on = l.equipped.aura === st.id, d = { icon: "✨", name: `Aura: ${st.name}`, rarity: "extraordinary" };
-        return rowH(d, btn(on ? "Unequip" : "Equip", { action: "equip", slot: "aura", id: on ? null : st.id }), "Full-set reward: your panel glows");
-      }).join("");
-      return (auras ? `<div class="sec">Auras</div>${auras}` : "") + sets().map((st) => {
-        const slot = st.kind, all = members(st), have = all.filter((d) => l.owned.includes(d.id)).length;
-        const half = Math.ceil(all.length / 2), stage = stageOf(have, all.length);
-        const mark = (n, on) => `<span class="${on ? "ok" : ""}">${on ? "✓" : "○"} ${n}:</span>`;
-        return `<div class="sec">${st.icon} ${st.name} · ${have}/${all.length}
-            <small>${mark(half, stage >= 1)} ${pct(st.half)} ${skillName(st.skill)} XP forever · ${mark(all.length, stage >= 2)} ${pct(st.full)} + aura</small></div>
-          <div class="sbar"><i style="width:${(100 * have / all.length).toFixed(0)}%"></i></div>` +
-          all.map((d) => {
-            if (!l.owned.includes(d.id)) return `<div class="it locked" style="--rc:${rarity(d.rarity).color}"><span class="ii">❔</span><span class="in">???<small>${rarity(d.rarity).name}</small></span></div>`;
-            const on = l.equipped[slot] === d.id;
-            return rowH(d, btn(on ? "Unequip" : "Equip", { action: "equip", slot, id: on ? null : d.id }), rarity(d.rarity).name);
-          }).join("");
-      }).join("");
-    }
+    if (tab === "collection") return sets().map(setCard).join("");
     const row = (r) => {
       const can = l.gold >= r.cost;
       const right = confirmBuy === r.id
