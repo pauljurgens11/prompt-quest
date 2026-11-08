@@ -90,7 +90,7 @@ Same for `loot_since`, which starts coins and the streak.
   chest opens once, a voucher is used once, and coins never go negative.
 - **Rates:** one chest per 2,500 XP (about 2 on a normal day), the same at every level. A
   level-up upgrades the next chest one tier. Milestone chests come every 10th level and at
-  streak days 7/30/100/200/365. From level 15 every level-up gives a chest; below 15 a
+  streak days 7/30/100/200/365. From level 30 every level-up gives a chest; below 30 a
   level-up has a 1 in 3 chance (a roll of the chest id). Levels you had before this rule
   existed give nothing.
 - **Coins:** 1 per 50 XP plus coin drops. They buy chests and real-life rewards in the shop.

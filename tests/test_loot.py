@@ -88,19 +88,21 @@ class LootTest(unittest.TestCase):
         self.assertEqual(len(inv["boosts"]), 1)
         self.assertEqual(inv["boost_active"][0], 100)
 
-    def test_level_ups_give_chests_from_15_and_sometimes_before_never_for_old_levels(self):
+    def test_level_ups_always_give_chests_from_the_threshold_and_a_third_of_the_time_below(self):
         def chests(levels):
             ledger = {}
             for lv in levels:
                 loot.earn(CFG, ledger, [skill(f"s{i}", 0, lv[i]) for i in range(len(lv))], NO_STREAK, now=1)
             return {c for c in ledger["chests"] if c.startswith("levelup-")}
-        got = chests([[12] * 200, [40] * 200])  # 200 skills climb 12 -> 40
-        per_level = {lv: sum(f"-{lv}" == c[c.rfind("-"):] for c in got) for lv in range(13, 41)}
-        self.assertTrue(all(per_level[lv] == 200 for lv in range(15, 41) if lv % 10))  # always from 15
-        self.assertEqual(per_level[20] + per_level[30] + per_level[40], 0)  # milestones are not doubled
-        self.assertTrue(100 < per_level[13] + per_level[14] < 170)  # about 1 in 3 of 400 below 15
+        frm = CFG["loot"]["level_up_chest"]["always_from"]
+        got = chests([[12] * 200, [frm + 10] * 200])  # 200 skills climb from 12 to 10 levels past the threshold
+        per_level = {lv: sum(f"-{lv}" == c[c.rfind("-"):] for c in got) for lv in range(13, frm + 11)}
+        self.assertTrue(all(per_level[lv] == 200 for lv in range(frm, frm + 11) if lv % 10))  # always from the threshold
+        self.assertEqual(sum(per_level[lv] for lv in per_level if lv % 10 == 0), 0)  # milestones are not doubled
+        below = [lv for lv in range(13, frm) if lv % 10]
+        self.assertAlmostEqual(sum(per_level[lv] for lv in below) / (200 * len(below)), 1 / 3, delta=0.05)  # 1 in 3 below
         self.assertEqual(chests([[30] * 5]), set())  # levels you had before the rule give nothing
-        self.assertEqual(chests([[12] * 200, [40] * 200, [3] * 200, [40] * 200]), got)  # a dip never re-drops
+        self.assertEqual(chests([[12] * 200, [frm + 10] * 200, [3] * 200, [frm + 10] * 200]), got)  # a dip never re-drops
 
     def test_you_can_only_equip_what_you_own_in_its_own_slot(self):
         ledger = self.big_ledger()
@@ -124,20 +126,20 @@ class LootTest(unittest.TestCase):
 
     def test_a_recount_moves_levels_but_pays_no_chests(self):
         ledger = {}
-        loot.earn(CFG, ledger, [skill("afk", 1_600, 12)], NO_STREAK, now=1)
+        loot.earn(CFG, ledger, [skill("afk", 1_600, 25)], NO_STREAK, now=1)
         ledger["last_total_xp"], ledger["coins_base_xp"] = 1_600, 0
         before = set(ledger["chests"])
-        jumped = [skill("afk", 4_400, 21)]  # the counting got fixed: same work, higher level
+        jumped = [skill("afk", 4_400, 34)]  # the counting got fixed: same work, higher level
         loot.rebase(ledger, jumped, CFG["loot"]["xp_per_chest"])
         loot.earn(CFG, ledger, jumped, NO_STREAK, now=2)
         self.assertEqual(set(ledger["chests"]), before)
         self.assertEqual(ledger["coins_base_xp"], 2_800)  # coins do not jump either
-        loot.earn(CFG, ledger, [skill("afk", 4_900, 22)], NO_STREAK, now=3)  # real work after it still pays
-        self.assertIn("levelup-afk-22", ledger["chests"])
-        del ledger["chests"]["levelup-afk-22"]
-        ledger["revoked"] = ["levelup-afk-22"]  # you asked for it to go away
-        loot.earn(CFG, ledger, [skill("afk", 4_900, 22)], NO_STREAK, now=4)
-        self.assertNotIn("levelup-afk-22", ledger["chests"])
+        loot.earn(CFG, ledger, [skill("afk", 4_900, 35)], NO_STREAK, now=3)  # real work after it still pays
+        self.assertIn("levelup-afk-35", ledger["chests"])
+        del ledger["chests"]["levelup-afk-35"]
+        ledger["revoked"] = ["levelup-afk-35"]  # you asked for it to go away
+        loot.earn(CFG, ledger, [skill("afk", 4_900, 35)], NO_STREAK, now=4)
+        self.assertNotIn("levelup-afk-35", ledger["chests"])
 
     def test_set_bonus_starts_when_the_set_is_done_and_duplicates_do_not_count(self):
         cfg = json.loads(json.dumps(CFG))
