@@ -158,6 +158,7 @@
     if (document.body.classList.contains("compact") || !B) return;
     const dt = Math.min(0.05, (now - (G.lastFrame || now)) / 1000); G.lastFrame = now;
     const room = W() - GW;
+    if (room <= 0) return;  // the room is not laid out yet (page still loading)
     if (now > G.next && !G.busy && !drag && !G.held && !G.flying && !G.down) decide(now, room);
     if (G.held) { /* follows your pointer (see carry) */ }
     else if (G.flying) fly(dt, room);
