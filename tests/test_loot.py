@@ -232,7 +232,7 @@ class BuddyTest(unittest.TestCase):
         return f"d{int(t // self.DAY)}"
 
     def test_meals_come_only_from_todays_work_and_are_eaten_once(self):
-        totals = {"d1": 2500}  # 2 meals earned on day 1
+        totals = {"d1": 2 * self.B.settings(CFG)["xp_per_meal"] + 100}  # 2 meals earned on day 1
         feeds = [{"action": "feed", "t": self.DAY + 3600 * h} for h in (10, 10.1, 10.2, 10.3)]
         st = self.B.state(CFG, feeds, totals, "d1", now=self.DAY + 3600 * 11, start=self.DAY, day_of=self.day_of)
         self.assertEqual(st["meals_left"], 0)
@@ -249,7 +249,7 @@ class BuddyTest(unittest.TestCase):
 
     def test_a_poop_pays_one_coin_once_only_after_a_real_meal_and_only_once_it_is_there(self):
         feed_t = self.DAY + 3600 * 10
-        totals = {"d1": 1200}  # one meal earned
+        totals = {"d1": self.B.settings(CFG)["xp_per_meal"]}  # one meal earned
         due = feed_t + (30 + 60 * self.B.roll(f"poop-{int(feed_t)}")) * 60
         acts = [{"action": "feed", "t": feed_t}, {"action": "feed", "t": feed_t + 60},  # the second has no meal
                 {"action": "scoop", "poop": f"poop-{int(feed_t)}", "t": due - 10},       # too early

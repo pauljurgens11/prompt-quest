@@ -86,5 +86,5 @@ def state(cfg: Cfg, actions: List[Dict[str, Any]], totals: Dict[str, float], tod
         "food": round(food, 1), "clean": round(clean, 1), "strength": st,
         "mood": round((food + clean + st) / 3, 1),
         "meals_left": max(0, earned - fed.get(today, 0)), "meals_today": earned, "max_meals": b["max_meals"],
-        "next_meal_xp": next_meal, "meal": b["meal"], **poops(meals, actions, now),
+        "next_meal_xp": next_meal, "meal": b["meal"], "xp_per_meal": b["xp_per_meal"], **poops(meals, actions, now),
     }
