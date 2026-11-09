@@ -58,7 +58,7 @@
   // ---------- state of the scene ----------
   const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0,
               scrub: 0, cleanShown: 100, lastFrame: 0 };
-  const W = () => $("room").clientWidth - 34, GW = 46;  // the right edge holds the food and sponge
+  const W = () => $("room").clientWidth - 60, GW = 46;  // the right end of the floor holds his plate and sponge
 
   function build() {
     const el = $("buddy");
@@ -69,7 +69,8 @@
           <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><div class="pdirt" id="pdirt"></div><span class="gwatch" id="gwatch">⌚</span></div>
           <span class="fly f1"></span><span class="fly f2"></span></div>
         <div class="poops" id="poops"></div>
-        <div class="tools"><span class="tool" id="tFood">🍖<b id="meals"></b></span><span class="tool" id="tSponge">🧽</span></div>
+        <div class="tools"><span class="tool food" id="tFood" title="Drag to his mouth"><span class="ico">🍖</span><b id="meals"></b></span>
+          <span class="tool sponge" id="tSponge" title="Scrub him"><span class="ico">🧽</span><i class="sb s1"></i><i class="sb s2"></i></span></div>
         <div class="floor"></div></div>`;
     $("guy").onpointerdown = hold;
     $("tFood").onpointerdown = (e) => grab(e, "food");
@@ -110,7 +111,7 @@
   function paintStats() {
     const bar = (icon, v, low) => `<div class="bbar ${v < low ? "low" : ""}"><span>${icon}</span><b><i style="width:${Math.max(2, v)}%"></i></b></div>`;
     $("bbars").innerHTML = bar("🍖", B.food, 25) + bar("🫧", B.clean, 30) + bar("💪", B.strength, 35);
-    $("meals").textContent = B.meals_left;
+    $("meals").textContent = "×" + B.meals_left;
     $("tFood").classList.toggle("dis", !(B.meals_left > 0));
     $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.right ? " right" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
     if (!drag) G.cleanShown = B.clean;
