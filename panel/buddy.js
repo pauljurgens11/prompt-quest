@@ -159,6 +159,7 @@
     const dt = Math.min(0.05, (now - (G.lastFrame || now)) / 1000); G.lastFrame = now;
     const room = W() - GW;
     if (room <= 0) return;  // the room is not laid out yet (page still loading)
+    if (!G.placed) { G.placed = true; G.x = G.tx = room / 2; }  // he starts in the middle of his room
     if (now > G.next && !G.busy && !drag && !G.held && !G.flying && !G.down) decide(now, room);
     if (G.held) { /* follows your pointer (see carry) */ }
     else if (G.flying) fly(dt, room);
@@ -168,9 +169,9 @@
     G.squash = Math.max(0, G.squash - dt * 6);
     G.rot += (G.rotTo - G.rot) * Math.min(1, dt * 12);
     const sx = 1 + G.squash * 0.18, sy = 1 - G.squash * 0.2, scale = weak() ? 0.82 : strong() ? 1.08 : 1;
-    // whole pixels and only on change: sub-pixel moves every frame make WebKit redraw the emoji, which shimmers
-    set($("guy"), `translate(${Math.round(G.x)}px, ${-Math.round(G.y)}px)`);
-    set($("gbody"), `rotate(${Math.round(G.rot)}deg) scale(${(sx * scale).toFixed(2)}, ${(sy * scale).toFixed(2)})`);
+    // only on change; .gbody and .guy are their own layers (will-change), so moving them never redraws the emoji
+    set($("guy"), `translate(${G.x.toFixed(1)}px, ${(-G.y).toFixed(1)}px)`);
+    set($("gbody"), `rotate(${G.rot.toFixed(1)}deg) scale(${(sx * scale).toFixed(2)}, ${(sy * scale).toFixed(2)})`);
     set($("guy").querySelector(".shadow"), `scale(${(1 - Math.min(0.5, G.y / 80)).toFixed(2)})`);
     $("guy").classList.toggle("idle", Math.abs(G.tx - G.x) <= 1 && G.y === 0 && !G.held && !G.flying && !G.down);
     eyes(now);
@@ -183,7 +184,7 @@
   function walk(dt, now) {
     const speed = weak() ? 12 : 26, moving = Math.abs(G.tx - G.x) > 1;
     if (moving) G.x += Math.sign(G.tx - G.x) * Math.min(Math.abs(G.tx - G.x), speed * dt);
-    G.rotTo = moving ? Math.sin(now / 110) * 6 : 0;  // a waddle while walking, still when standing
+    G.rotTo = moving ? Math.sin(now / 170) * 3 : 0;  // a waddle while walking, still when standing
     if (G.y > 0 || G.vy > 0) {
       G.vy -= 520 * dt; G.y += G.vy * dt;
       if (G.y <= 0) { G.y = 0; G.vy = 0; G.squash = 1; }
@@ -217,9 +218,11 @@
     if (weak()) { if (r < 0.3) G.tx = Math.max(0, Math.min(room, G.x + rnd(-15, 15))); return; }
     if (m >= 75 && r < 0.1) { jump(strong() ? 150 : 120); return; }
     if (strong() && r < 0.18) { flex(); return; }
-    const toMiddle = G.x < room * 0.2 ? 1 : G.x > room * 0.8 ? -1 : 0;  // near a wall he wanders back in
-    if (toMiddle) G.tx = G.x + toMiddle * rnd(30, 70);
-    else if (r < 0.55) G.tx = Math.max(0, Math.min(room, G.x + rnd(-60, 60)));
+    if (r < 0.6) {  // a stroll to anywhere in the room, at least a few steps away
+      let t = rnd(0, room);
+      if (Math.abs(t - G.x) < 25) t = G.x < room / 2 ? Math.min(room, G.x + rnd(25, 60)) : Math.max(0, G.x - rnd(25, 60));
+      G.tx = t;
+    }
   }
   function jump(v) { if (G.y === 0) { G.vy = v; } }
   function flex() {

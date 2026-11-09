@@ -160,7 +160,6 @@
   .mini2 svg { width: 22px; height: 19px; }
   .sec { font-size: 13px; color: var(--orange); margin: 5px 0 2px; } .empty, .qty { font-size: 13px; color: var(--muted-2); }
   .petb { display: inline-block; font-size: 14px; animation: bob 1.1s ease-in-out infinite; }
-  .pet { position: absolute; right: 2px; bottom: 4px; font-size: 18px; animation: bob 1.1s ease-in-out infinite; filter: drop-shadow(1px 1px 0 #000); }
 
   /* ---- pet gear (watch on the pet, a glass of milk beside it) and set auras ---- */
   .petw { position: relative; display: inline-block; padding-right: 8px; animation: bob 1.1s ease-in-out infinite; }  /* room for the watch: the title clips anything outside it */
@@ -240,7 +239,7 @@
   /* a pet as the lil guy: the emoji, its dirt, the watch it wears, its milk on the floor */
   .gpet { display: none; position: absolute; left: 0; right: 0; bottom: -5px; font-size: 38px; line-height: 1; text-align: center; }
   .guy.right .gpet { transform: scaleX(-1); }  /* pet emoji look left; mirrored he looks right */
-  .gbody { will-change: transform; }  /* drawn once, then moved as a picture: no re-drawing the emoji */
+  .guy, .gbody { will-change: transform; }  /* drawn once, then moved as a picture: no re-drawing the emoji */
   .guy.idle .gbody { animation: breathe 2.8s ease-in-out infinite; } @keyframes breathe { 50% { scale: 1.03 .97; } }
   .guy.pet .gpet { display: block; } .guy.pet .gsvg { display: none; }
   .guy.pet .gpet { filter: drop-shadow(1px 1px 0 #000); }
