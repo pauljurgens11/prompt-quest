@@ -4,6 +4,7 @@ Strength follows your recent days of work (all skills together). Hunger and clea
 with time; you feed it with meals you earn by working today, and clean it for free. Everything
 is replayed from the panel's action log, so a meal is eaten once and a rescan changes nothing.
 """
+import hashlib
 from typing import Any, Callable, Dict, List
 
 Cfg = Dict[str, Any]
@@ -16,6 +17,24 @@ DEFAULTS: Cfg = {
     "day_target_xp": 5000,   # a normal day in all five skills
     "strength_keep": 0.7,    # share of strength left after a day without work
 }
+
+
+def roll(key: str) -> float:
+    """Deterministic number in [0, 1) for a key."""
+    return int(hashlib.sha1(key.encode()).hexdigest()[:8], 16) / 16 ** 8
+
+
+def poops(feeds: List[float], actions: List[Dict[str, Any]], now: float) -> Dict[str, Any]:
+    """Each meal he really ate comes out once, 30-90 minutes later. Cleaning one up pays a coin,
+    once, and only after it is there: a poop is named by its meal, so none can be faked."""
+    due = {f"poop-{int(t)}": t + (30 + 60 * roll(f"poop-{int(t)}")) * 60 for t in feeds}
+    scooped: List[str] = []
+    for a in sorted((a for a in actions if a.get("action") == "scoop"), key=lambda a: a.get("t", 0)):
+        pid = a.get("poop")
+        if pid in due and pid not in scooped and due[pid] <= a.get("t", 0) <= now:
+            scooped.append(pid)
+    lying = [{"id": pid, "x": round(8 + 70 * roll(pid + ":x"))} for pid, t in due.items() if t <= now and pid not in scooped]
+    return {"poops": lying, "scooped": len(scooped)}
 
 
 def settings(cfg: Cfg) -> Cfg:
@@ -45,6 +64,7 @@ def state(cfg: Cfg, actions: List[Dict[str, Any]], totals: Dict[str, float], tod
     hunger_rate, dirt_rate = 100 / (b["hunger_hours"] * 3600), 100 / (b["clean_hours"] * 3600)
     food, clean, t = 80.0, 80.0, start
     fed: Dict[str, int] = {}
+    meals: List[float] = []
     for a in sorted((a for a in actions if a.get("action") in ("feed", "clean")), key=lambda a: a.get("t", 0)):
         at = a.get("t", 0)
         if not start <= at <= now:
@@ -57,6 +77,7 @@ def state(cfg: Cfg, actions: List[Dict[str, Any]], totals: Dict[str, float], tod
             if food < 95 and fed.get(day, 0) < meals_earned(b, totals.get(day, 0)):
                 fed[day] = fed.get(day, 0) + 1
                 food = min(100.0, food + b["meal"])
+                meals.append(at)
     food, clean = max(0.0, food - (now - t) * hunger_rate), max(0.0, clean - (now - t) * dirt_rate)
     earned = meals_earned(b, totals.get(today, 0))
     st = strength(b, totals, today)
@@ -65,5 +86,5 @@ def state(cfg: Cfg, actions: List[Dict[str, Any]], totals: Dict[str, float], tod
         "food": round(food, 1), "clean": round(clean, 1), "strength": st,
         "mood": round((food + clean + st) / 3, 1),
         "meals_left": max(0, earned - fed.get(today, 0)), "meals_today": earned, "max_meals": b["max_meals"],
-        "next_meal_xp": next_meal, "meal": b["meal"],
+        "next_meal_xp": next_meal, "meal": b["meal"], **poops(meals, actions, now),
     }

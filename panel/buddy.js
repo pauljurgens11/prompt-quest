@@ -68,6 +68,7 @@
         <div class="guy" id="guy"><div class="shadow"></div><span class="gmilk" id="gmilk">🥛</span>
           <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><div class="pdirt" id="pdirt"></div><span class="gwatch" id="gwatch">⌚</span></div>
           <span class="fly f1"></span><span class="fly f2"></span></div>
+        <div class="poops" id="poops"></div>
         <div class="tools"><span class="tool" id="tFood">🍖<b id="meals"></b></span><span class="tool" id="tSponge">🧽</span></div>
         <div class="floor"></div></div>`;
     $("guy").onpointerdown = hold;
@@ -75,7 +76,11 @@
     $("tSponge").onpointerdown = (e) => grab(e, "sponge");
     $("room").onmouseenter = () => window.showInfoHTML(info());
     $("room").onmouseleave = () => window.showInfoHTML(null);
-    document.addEventListener("pointermove", (e) => (G.look = { x: e.clientX, y: e.clientY, t: performance.now() }));
+    document.addEventListener("pointermove", (e) => {
+      if (e.buttons === 0 && (grip || drag)) cancelHold();  // the button was let go somewhere we did not hear it
+      const r = $("room").getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) G.look = { x: e.clientX, y: e.clientY, t: performance.now() };
+    });
     built = true;
     gear();
     requestAnimationFrame(frame);
@@ -111,6 +116,26 @@
     $("guy").className = "guy" + (G.pet ? " pet" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
     if (!drag) G.cleanShown = B.clean;
     paintDirt();
+    paintPoops();
+  }
+  // poops he left: click one to clean it up for a coin
+  const scooped = new Set();
+  function paintPoops() {
+    const el = $("poops");
+    el.innerHTML = (B.poops || []).filter((p) => !scooped.has(p.id))
+      .map((p) => `<span class="poop" data-id="${p.id}" style="left:${p.x}%" title="Clean up: +1 coin">💩<i class="stinkl">〰</i></span>`).join("");
+    el.querySelectorAll(".poop").forEach((p) => (p.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); scoop(p); }));
+  }
+  function scoop(el) {
+    const id = el.dataset.id;
+    if (scooped.has(id)) return;
+    scooped.add(id);
+    post({ action: "scoop", poop: id });
+    SFX.sparkle(); tone(1568, 0.15, 0.08, "square", 0.03); tone(2093, 0.2, 0.1, "square", 0.025);
+    const coin = document.createElement("span");
+    coin.className = "bfx up"; coin.textContent = "+1 🪙"; coin.style.left = el.style.left; coin.style.bottom = "14px";
+    $("room").appendChild(coin); setTimeout(() => coin.remove(), 1700);
+    el.classList.add("gone"); setTimeout(() => el.remove(), 300);
   }
   function paintDirt() {
     const n = Math.round((100 - G.cleanShown) / 14);
@@ -136,24 +161,25 @@
     if (now > G.next && !G.busy && !drag && !G.held && !G.flying && !G.down) decide(now, room);
     if (G.held) { /* follows your pointer (see carry) */ }
     else if (G.flying) fly(dt, room);
-    else if (!G.down) walk(dt);
+    else if (!G.down) walk(dt, now);
+    if (!(G.x >= 0 && G.x <= room)) G.x = Number.isFinite(G.x) ? Math.max(0, Math.min(room, G.x)) : room / 2;  // never outside his room
+    if (!(G.y >= 0)) G.y = 0;
     G.squash = Math.max(0, G.squash - dt * 6);
     G.rot += (G.rotTo - G.rot) * Math.min(1, dt * 12);
-    const sx = 1 + G.squash * 0.18, sy = 1 - G.squash * 0.2, scale = weak() ? 0.82 : strong() ? 1.08 : 1;
+    const sx = 1 + G.squash * 0.18 - (G.breath || 0), sy = 1 - G.squash * 0.2 + (G.breath || 0), scale = weak() ? 0.82 : strong() ? 1.08 : 1;
     $("guy").style.transform = `translate(${G.x}px, ${-G.y}px)`;
     $("gbody").style.transform = `rotate(${G.rot}deg) scale(${sx * scale}, ${sy * scale})`;
     $("guy").querySelector(".shadow").style.transform = `scale(${1 - Math.min(0.5, G.y / 80)})`;
     eyes(now);
-    if (!G.busy && !drag) mouth(restingMouth());
+    if (!G.busy && !drag && !G.held) mouth(restingMouth());
   }
 
   // walk in little bounces toward the target; gravity pulls him down
-  function walk(dt) {
-    const speed = weak() ? 18 : 45;
-    if (Math.abs(G.tx - G.x) > 1) {
-      G.x += Math.sign(G.tx - G.x) * Math.min(Math.abs(G.tx - G.x), speed * dt);
-      if (G.y === 0 && G.vy === 0) G.vy = weak() ? 60 : 110;
-    }
+  function walk(dt, now) {
+    const speed = weak() ? 12 : 26, moving = Math.abs(G.tx - G.x) > 1;
+    if (moving) G.x += Math.sign(G.tx - G.x) * Math.min(Math.abs(G.tx - G.x), speed * dt);
+    G.rotTo = moving ? Math.sin(now / 110) * 6 : 0;  // a waddle while walking, still when standing
+    G.breath = moving ? 0 : Math.sin(now / 700) * 0.025;  // and a slow breath when idle
     if (G.y > 0 || G.vy > 0) {
       G.vy -= 520 * dt; G.y += G.vy * dt;
       if (G.y <= 0) { G.y = 0; G.vy = 0; G.squash = 1; }
@@ -183,11 +209,13 @@
 
   function decide(now, room) {
     const r = Math.random(), m = mood();
-    if (weak()) { G.tx = Math.max(0, Math.min(room, G.x + rnd(-15, 15))); G.next = now + rnd(3000, 6000); return; }
-    if (m >= 75 && r < 0.2) { jump(strong() ? 170 : 140); setTimeout(() => jump(strong() ? 170 : 140), 450); G.next = now + rnd(2500, 4000); return; }
-    if (strong() && r < 0.35) { flex(); G.next = now + 2500; return; }
-    if (r < 0.75) G.tx = rnd(0, room);
-    G.next = now + rnd(1800, 4200);
+    G.next = now + rnd(4000, 9000);  // mostly he just stands there and breathes
+    if (weak()) { if (r < 0.3) G.tx = Math.max(0, Math.min(room, G.x + rnd(-15, 15))); return; }
+    if (m >= 75 && r < 0.1) { jump(strong() ? 150 : 120); return; }
+    if (strong() && r < 0.18) { flex(); return; }
+    const toMiddle = G.x < room * 0.2 ? 1 : G.x > room * 0.8 ? -1 : 0;  // near a wall he wanders back in
+    if (toMiddle) G.tx = G.x + toMiddle * rnd(30, 70);
+    else if (r < 0.55) G.tx = Math.max(0, Math.min(room, G.x + rnd(-60, 60)));
   }
   function jump(v) { if (G.y === 0) { G.vy = v; } }
   function flex() {
@@ -200,8 +228,10 @@
     let dx = Math.sign(G.tx - G.x) * 1.5, dy = 0;
     if (G.pet) {  // a pet turns to face you (pet emoji look left, so mirror to look right)
       const r = $("guy").getBoundingClientRect(), at = drag || (G.look && now - G.look.t < 4000 ? G.look : null);
-      const right = at ? at.x > r.left + r.width / 2 : G.tx > G.x + 1 ? true : G.tx < G.x - 1 ? false : G.right;
-      G.right = right; $("gpet").style.transform = right ? "scaleX(-1)" : "";
+      let want = G.right;
+      if (Math.abs(G.tx - G.x) > 1 && !drag) want = G.tx > G.x;
+      else if (at) { const off = at.x - (r.left + r.width / 2); if (off > 24) want = true; else if (off < -24) want = false; }
+      if (want !== G.right && now - (G.turnedAt || 0) > 1000) { G.right = want; G.turnedAt = now; $("gpet").style.transform = want ? "scaleX(-1)" : ""; }
       return;
     }
     if (drag) { const r = $("guy").getBoundingClientRect(); dx = clamp((drag.x - (r.left + r.width / 2)) / 12); dy = clamp((drag.y - (r.top + r.height / 3)) / 12); }
@@ -218,14 +248,23 @@
     e.preventDefault();
     if (drag || G.down) return;
     grip = { x0: e.clientX, y0: e.clientY, moved: false, trail: [] };
+    grip.timer = setTimeout(() => grip && !grip.moved && lift(grip.x0, grip.y0), 250);  // hold still: up he goes
     document.addEventListener("pointermove", carry);
     document.addEventListener("pointerup", release, { once: true });
   }
   function carry(e) {
     if (!grip) return;
     if (!grip.moved && Math.hypot(e.clientX - grip.x0, e.clientY - grip.y0) < 4) return;
-    if (!grip.moved) { grip.moved = true; G.held = true; G.flying = false; G.vy = 0; mouth("open"); SFX.boing(); }
-    const r = $("room").getBoundingClientRect(), room = W() - GW;
+    if (!grip.moved) lift(e.clientX, e.clientY);
+    place(e.clientX, e.clientY);
+  }
+  function lift(x, y) {
+    grip.moved = true; G.held = true; G.flying = false; G.vy = 0; mouth("open"); SFX.boing();
+    $("guy").classList.add("dangling");
+    place(x, y - 18);
+  }
+  function place(cx, cy) {
+    const r = $("room").getBoundingClientRect(), room = W() - GW, e = { clientX: cx, clientY: cy };
     G.x = Math.max(0, Math.min(room, e.clientX - r.left - GW / 2));
     G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (e.clientY + GW / 2)));
     const now = performance.now();
@@ -237,6 +276,7 @@
     document.removeEventListener("pointermove", carry);
     const g = grip; grip = null;
     if (!g) return;
+    clearTimeout(g.timer); $("guy").classList.remove("dangling");
     if (!g.moved) { poke(); return; }
     G.held = false;
     const now = performance.now(), a = g.trail[0];
@@ -245,6 +285,11 @@
     G.vy = a ? Math.max(-900, Math.min(900, (G.y - a.y) / dt)) : 0;
     G.flying = true; G.hardest = 0;
     if (Math.hypot(G.vx, G.vy) > 250) { SFX.whee(); mouth("grin"); }
+  }
+  function cancelHold() {
+    if (grip) { document.removeEventListener("pointermove", carry); clearTimeout(grip.timer); grip = null; G.held = false; G.flying = true; $("guy").classList.remove("dangling"); }
+    if (drag) { document.removeEventListener("pointermove", move); drag.ghost.remove(); drag = null; }
+    G.busy = 0;
   }
   function poke() {
     if (drag) return;

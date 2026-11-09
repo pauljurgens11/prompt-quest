@@ -247,6 +247,20 @@ class BuddyTest(unittest.TestCase):
                           day_of=self.day_of)
         self.assertGreater(st["clean"], 99.9)
 
+    def test_a_poop_pays_one_coin_once_only_after_a_real_meal_and_only_once_it_is_there(self):
+        feed_t = self.DAY + 3600 * 10
+        totals = {"d1": 1200}  # one meal earned
+        due = feed_t + (30 + 60 * self.B.roll(f"poop-{int(feed_t)}")) * 60
+        acts = [{"action": "feed", "t": feed_t}, {"action": "feed", "t": feed_t + 60},  # the second has no meal
+                {"action": "scoop", "poop": f"poop-{int(feed_t)}", "t": due - 10},       # too early
+                {"action": "scoop", "poop": f"poop-{int(feed_t) + 60}", "t": due + 10},  # never eaten
+                {"action": "scoop", "poop": "poop-123", "t": due + 10}]                  # made up
+        st = self.B.state(CFG, acts, totals, "d1", now=due + 20, start=self.DAY, day_of=self.day_of)
+        self.assertEqual((st["scooped"], [p["id"] for p in st["poops"]]), (0, [f"poop-{int(feed_t)}"]))
+        acts += [{"action": "scoop", "poop": f"poop-{int(feed_t)}", "t": due + 30}] * 2
+        st = self.B.state(CFG, acts, totals, "d1", now=due + 40, start=self.DAY, day_of=self.day_of)
+        self.assertEqual((st["scooped"], st["poops"]), (1, []))
+
     def test_strength_grows_with_work_and_fades_when_you_slack(self):
         b = self.B.settings(CFG)
         work = {f"d{i:02d}": b["day_target_xp"] for i in range(11)}  # today (d10) worked too

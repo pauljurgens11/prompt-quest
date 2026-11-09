@@ -503,10 +503,10 @@ def run(paths):
     calibrate(cfg, st)
     save_json(paths.state, {**st, "seen": sorted(st["seen"])})
     stats = build_stats(cfg, st)
-    stats["loot"], stats["streak"] = settle_loot(cfg, st, ledger, actions, stats)
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
     stats["buddy"] = buddy.state(cfg, actions, daily_totals(cfg, st), today, time.time(),
                                  ledger.setdefault("buddy_from", time.time()), day_of)
+    stats["loot"], stats["streak"] = settle_loot(cfg, st, ledger, actions, stats, extra_coins=stats["buddy"]["scooped"])
     save_json(paths.loot, ledger)
     save_json(paths.stats, stats)
     return stats
@@ -533,7 +533,8 @@ def end_of_day(day):
     return datetime.fromisoformat(day + "T23:59:59").astimezone().timestamp()
 
 
-def settle_loot(cfg, st, ledger, actions, stats, now=None):
+def settle_loot(cfg, st, ledger, actions, stats, now=None, extra_coins=0):
+    """extra_coins: coins earned outside XP (a coin per poop you cleaned up)."""
     now = now or time.time()
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
     loot_day = cfg.get("loot_since", cfg.get("xp_since", "0000"))[:10]
@@ -555,7 +556,7 @@ def settle_loot(cfg, st, ledger, actions, stats, now=None):
     ledger["last_total_xp"] = stats["total_xp"]
     # coins count XP earned after loot_since: the first run after it records where XP stood
     base = ledger.setdefault("coins_base_xp", stats["total_xp"])
-    coins = max(0, stats["total_xp"] - base) * cfg["loot"].get("coins_per_xp", 0)
+    coins = max(0, stats["total_xp"] - base) * cfg["loot"].get("coins_per_xp", 0) + extra_coins
     inv = loot.inventory(cfg, ledger, actions, now, earned_coins=coins)
     inv["chest_contents"] = {c["id"]: loot.contents(cfg, c["id"], c["tier"]) for c in inv["unopened"]}
     inv["config"] = {k: cfg["loot"][k] for k in ("tiers", "rarities", "drops", "sets")}
