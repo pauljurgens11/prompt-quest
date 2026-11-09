@@ -254,13 +254,14 @@
   function hold(e) {
     e.preventDefault();
     if (drag || G.down) return;
-    grip = { x0: e.clientX, y0: e.clientY, moved: false, trail: [] };
+    grip = { x0: e.clientX, y0: e.clientY, moved: false, vx: 0, vy: 0, lx: e.clientX, ly: e.clientY, lt: performance.now() };
     grip.timer = setTimeout(() => grip && !grip.moved && lift(grip.x0, grip.y0), 250);  // hold still: up he goes
     document.addEventListener("pointermove", carry);
     document.addEventListener("pointerup", release, { once: true });
   }
   function carry(e) {
     if (!grip) return;
+    track(e.clientX, e.clientY);
     if (!grip.moved && Math.hypot(e.clientX - grip.x0, e.clientY - grip.y0) < 4) return;
     if (!grip.moved) lift(e.clientX, e.clientY);
     place(e.clientX, e.clientY);
@@ -274,10 +275,14 @@
     const r = $("room").getBoundingClientRect(), room = W() - GW, e = { clientX: cx, clientY: cy };
     G.x = Math.max(0, Math.min(room, e.clientX - r.left - GW / 2));
     G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (e.clientY + GW / 2)));
-    const now = performance.now();
-    grip.trail.push({ x: G.x, y: G.y, t: now }); grip.trail = grip.trail.filter((p) => now - p.t < 90);
-    const a = grip.trail[0], vx = grip.trail.length > 1 ? (G.x - a.x) / Math.max(0.016, (now - a.t) / 1000) : 0;
-    G.rotTo = Math.max(-35, Math.min(35, -vx * 0.05));  // he dangles behind your hand
+    G.rotTo = Math.max(-35, Math.min(35, -grip.vx * 0.05));  // he dangles behind your hand
+  }
+  // your hand's speed, from the real pointer (not his clamped position), smoothed over every move
+  function track(x, y) {
+    const now = performance.now(), dt = Math.max(0.008, (now - grip.lt) / 1000);
+    grip.vx = grip.vx * 0.5 + ((x - grip.lx) / dt) * 0.5;
+    grip.vy = grip.vy * 0.5 + (-(y - grip.ly) / dt) * 0.5;
+    grip.lx = x; grip.ly = y; grip.lt = now;
   }
   function release() {
     document.removeEventListener("pointermove", carry);
@@ -286,10 +291,10 @@
     clearTimeout(g.timer); $("guy").classList.remove("dangling");
     if (!g.moved) { poke(); return; }
     G.held = false;
-    const now = performance.now(), a = g.trail[0];
-    const dt = a ? Math.max(0.016, (now - a.t) / 1000) : 1;
-    G.vx = a ? Math.max(-900, Math.min(900, (G.x - a.x) / dt)) : 0;
-    G.vy = a ? Math.max(-900, Math.min(900, (G.y - a.y) / dt)) : 0;
+    // still moving when you let go: full throw; a clear pause first (over 60 ms) fades it to a drop
+    const idle = performance.now() - g.lt, keep = idle < 60 ? 1 : Math.max(0, 1 - (idle - 60) / 120);
+    G.vx = Math.max(-900, Math.min(900, g.vx * keep));
+    G.vy = Math.max(-900, Math.min(900, g.vy * keep));
     G.flying = true; G.hardest = 0;
     if (Math.hypot(G.vx, G.vy) > 250) { SFX.whee(); mouth("grin"); }
   }
@@ -394,6 +399,7 @@
 
   window.Buddy = {
     gear,
+    peek: () => ({ ...G }),  // read-only look at his physics, for testing
     render(stats) {
       B = stats.buddy ? { ...stats.buddy } : null;
       $("buddy").style.display = B ? "block" : "none";
