@@ -220,3 +220,40 @@ class StreakTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BuddyTest(unittest.TestCase):
+    """Guards the buddy against free food and a strength that ignores how you work."""
+    import buddy as B  # noqa: E402
+
+    DAY = 86400
+
+    def day_of(self, t):
+        return f"d{int(t // self.DAY)}"
+
+    def test_meals_come_only_from_todays_work_and_are_eaten_once(self):
+        totals = {"d1": 2500}  # 2 meals earned on day 1
+        feeds = [{"action": "feed", "t": self.DAY + 3600 * h} for h in (10, 10.1, 10.2, 10.3)]
+        st = self.B.state(CFG, feeds, totals, "d1", now=self.DAY + 3600 * 11, start=self.DAY, day_of=self.day_of)
+        self.assertEqual(st["meals_left"], 0)
+        # start at 80, starve 10 h (62.5 lost), then only the 2 earned meals fill it (+35 each), minus 1 h
+        hours = 100 / self.B.settings(CFG)["hunger_hours"]
+        self.assertAlmostEqual(st["food"], round(max(0, 80 - 10 * hours) + 2 * 35 - 1 * hours, 1), delta=0.2)
+
+    def test_hunger_and_dirt_never_go_below_zero_and_cleaning_resets_dirt(self):
+        st = self.B.state(CFG, [], {}, "d9", now=9 * self.DAY, start=0, day_of=self.day_of)
+        self.assertEqual((st["food"], st["clean"]), (0, 0))
+        st = self.B.state(CFG, [{"action": "clean", "t": 9 * self.DAY - 1}], {}, "d9", now=9 * self.DAY, start=0,
+                          day_of=self.day_of)
+        self.assertGreater(st["clean"], 99.9)
+
+    def test_strength_grows_with_work_and_fades_when_you_slack(self):
+        b = self.B.settings(CFG)
+        work = {f"d{i:02d}": b["day_target_xp"] for i in range(11)}  # today (d10) worked too
+        strong = self.B.strength(b, work, "d10")
+        self.assertGreater(strong, 90)
+        slack = dict(work, **{f"d{i:02d}": 0 for i in range(10, 13)})
+        weak = self.B.strength(b, slack, "d13")
+        self.assertLess(weak, strong * 0.5)
+        half = {f"d{i:02d}": b["day_target_xp"] / 2 for i in range(10)}
+        self.assertLess(self.B.strength(b, half, "d10"), strong)

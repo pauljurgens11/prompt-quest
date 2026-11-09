@@ -31,6 +31,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import buddy  # noqa: E402
 import loot  # noqa: E402
 DEFAULT_DATA = Path.home() / "Library" / "Application Support" / "ClaudeSkills"
 
@@ -503,6 +504,9 @@ def run(paths):
     save_json(paths.state, {**st, "seen": sorted(st["seen"])})
     stats = build_stats(cfg, st)
     stats["loot"], stats["streak"] = settle_loot(cfg, st, ledger, actions, stats)
+    today = datetime.now().astimezone().strftime("%Y-%m-%d")
+    stats["buddy"] = buddy.state(cfg, actions, daily_totals(cfg, st), today, time.time(),
+                                 ledger.setdefault("buddy_from", time.time()), day_of)
     save_json(paths.loot, ledger)
     save_json(paths.stats, stats)
     return stats

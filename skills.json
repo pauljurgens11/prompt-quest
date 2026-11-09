@@ -1065,5 +1065,15 @@
       "cost": 50000
     }
   ],
-  "loot_since": "2026-11-05T22:50:31+02:00"
+  "loot_since": "2026-11-05T22:50:31+02:00",
+  "buddy": {
+    "xp_per_meal": 1200,
+    "max_meals": 4,
+    "meal": 35,
+    "hunger_hours": 16,
+    "clean_hours": 24,
+    "day_target_xp": 5000,
+    "strength_keep": 0.7,
+    "_note": "Your buddy (your equipped pet, or a hatchling). Strength: recent days of work, normal days settle near 100, a day off keeps 70%. Hunger empties in 16 h; feed it with meals you earn today (1 per 1,200 XP, up to 4). Cleaning is free; it gets dirty over 24 h."
+  }
 }

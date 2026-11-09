@@ -35,6 +35,7 @@ leaves your machine: it only reads `~/.claude/projects/**/*.jsonl`.
 - **Coins**: 1 per 50 XP plus coin drops (chests give no bonus coins). They buy chests and big real-life rewards in the shop.
 - **Streak**: a day counts once your skills earn 500 XP together. One missed day a week is free; Streak Shields cover more.
 - **Collectibles and sets**: pets, titles, milk (a glass beside your pet, up to Legendary Dragon Milk), watches (your pet wears it, up to a Richard Mille) 8 panel skins, and Lucky Charms (each one you own makes every future chest come 4-15% sooner, all four: a chest every 1,625 XP). Each kind is a set. Half a set gives a permanent XP bonus to one skill, the full set doubles it and unlocks a glowing aura. Bonuses never run out and are never sold. Hover your panel heading to see them.
+- **Your buddy**: your equipped pet (or a hatchling) lives under the chest tray. Feed it with meals your work earns today (1 per 1,200 XP, up to 4) and clean it for free; it gets hungry over 16 hours and dirty over a day. Its strength follows your last few days of work: normal days keep it near full, a day off costs 30%. Hover it for details.
 - **Rebalances pay nothing**: when the rules or the counting change, levels move but no chests or coins are paid or taken.
 - Everything is deterministic: the same work always drops the same chests, and nothing can be spent twice. Earned chests and what each opened chest gave live in `loot.json` (so editing the drop table never changes past drops), your clicks in `actions.jsonl`.
 
