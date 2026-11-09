@@ -24,6 +24,9 @@
     chomp: () => [0, 0.16, 0.32].forEach((t) => tone(180, t, 0.08, "square", 0.04, 120)),
     yum: () => [523, 659, 784].forEach((f, i) => tone(f, 0.5 + i * 0.08, 0.14, "triangle", 0.045)),
     scrub: () => tone(rnd(1400, 2200), 0, 0.04, "sine", 0.012),
+    thud: () => tone(110, 0, 0.12, "sine", 0.08, 60),
+    whee: () => tone(500, 0, 0.35, "triangle", 0.05, 1200),
+    dizzy: () => [1200, 900, 1200, 900].forEach((f, i) => tone(f, i * 0.09, 0.08, "sine", 0.03)),
     sparkle: () => [1319, 1568, 2093].forEach((f, i) => tone(f, i * 0.06, 0.2, "triangle", 0.04)),
   };
 
@@ -53,7 +56,7 @@
   const SPOTS = [[18, 44], [40, 46], [30, 18], [12, 30], [47, 26], [26, 50], [36, 14]];
 
   // ---------- state of the scene ----------
-  const G = { x: 60, y: 0, vy: 0, tx: 60, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0,
+  const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0,
               scrub: 0, cleanShown: 100, lastFrame: 0 };
   const W = () => $("room").clientWidth - 34, GW = 46;  // the right edge holds the food and sponge
 
@@ -62,18 +65,38 @@
     el.innerHTML = `<div class="room" id="room">
         <div class="bars" id="bbars"></div>
         <div class="think" id="think"></div>
-        <div class="guy" id="guy"><div class="shadow"></div><div class="gbody" id="gbody">${svg}</div>
+        <div class="guy" id="guy"><div class="shadow"></div><span class="gmilk" id="gmilk">🥛</span>
+          <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><div class="pdirt" id="pdirt"></div><span class="gwatch" id="gwatch">⌚</span></div>
           <span class="fly f1"></span><span class="fly f2"></span></div>
         <div class="tools"><span class="tool" id="tFood">🍖<b id="meals"></b></span><span class="tool" id="tSponge">🧽</span></div>
         <div class="floor"></div></div>`;
-    $("guy").onpointerdown = poke;
+    $("guy").onpointerdown = hold;
     $("tFood").onpointerdown = (e) => grab(e, "food");
     $("tSponge").onpointerdown = (e) => grab(e, "sponge");
     $("room").onmouseenter = () => window.showInfoHTML(info());
     $("room").onmouseleave = () => window.showInfoHTML(null);
     document.addEventListener("pointermove", (e) => (G.look = { x: e.clientX, y: e.clientY, t: performance.now() }));
     built = true;
+    gear();
     requestAnimationFrame(frame);
+  }
+
+  // your equipped pet is the lil guy (the blob stands in without one), wearing your watch, milk beside him
+  function gear() {
+    if (!built || !window.Loot) return;
+    const eq = Loot.equipped(), D = (id) => Loot.drop(id);
+    G.pet = !!eq.pet;
+    $("gpet").textContent = eq.pet ? D(eq.pet).icon : "";
+    const wear = (el, id) => {
+      el.style.display = id ? "" : "none";
+      if (!id) return;
+      const d = D(id); el.title = d.name; el.style.setProperty("--rc", Loot.rarityColor(d.rarity));
+      el.classList.remove("fx-common", "fx-rare", "fx-ultra", "fx-extraordinary"); el.classList.add("fx-" + d.rarity);
+    };
+    wear($("gwatch"), eq.watch); wear($("gmilk"), eq.milk);
+    if (!eq.milk) { const m = $("gmilk"); m.style.display = ""; m.className = "gmilk empty"; m.title = "No milk yet: find one in a chest"; }
+    else $("gmilk").classList.remove("empty");
+    if (B) paintStats();
   }
 
   const mood = () => (B.food + B.clean + B.strength) / 3;
@@ -85,17 +108,23 @@
     $("meals").textContent = B.meals_left;
     $("tFood").classList.toggle("dis", !(B.meals_left > 0));
     $("think").innerHTML = B.food < 25 ? "🍖" : weak() ? "💤" : "";
-    $("guy").className = "guy" + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
+    $("guy").className = "guy" + (G.pet ? " pet" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
     if (!drag) G.cleanShown = B.clean;
     paintDirt();
   }
   function paintDirt() {
     const n = Math.round((100 - G.cleanShown) / 14);
+    $("pdirt").innerHTML = G.pet ? SPOTS.slice(0, n).map(([x, y], i) =>
+      `<i style="left:${(x / 60) * 100}%;top:${(y / 60) * 100}%;width:${4 + (i % 3)}px;height:${4 + (i % 3)}px"></i>`).join("") : "";
     $("guy").querySelector(".dirt").innerHTML = SPOTS.slice(0, n).map(([x, y], i) =>
       `<circle cx="${x}" cy="${y}" r="${2.2 + (i % 3) * 0.7}" fill="#5a3b16" opacity=".8"/>`).join("");
   }
 
-  function mouth(m) { if (G.face !== m) { G.face = m; $("guy").querySelector(".mouth").innerHTML = MOUTH[m]; } }
+  function mouth(m) {  // a pet shows it with its body instead (lean in, chomp, droop), styled by data-m
+    if (G.face === m) return;
+    G.face = m; $("guy").dataset.m = m;
+    $("guy").querySelector(".mouth").innerHTML = MOUTH[m];
+  }
   function restingMouth() { return B.food < 25 ? "frown" : weak() ? "flat" : mood() >= 75 ? "grin" : "smile"; }
 
   // ---------- life: hops, landing squash, blinking, eyes that follow you ----------
@@ -104,8 +133,22 @@
     if (document.body.classList.contains("compact") || !B) return;
     const dt = Math.min(0.05, (now - (G.lastFrame || now)) / 1000); G.lastFrame = now;
     const room = W() - GW;
-    if (now > G.next && !G.busy && !drag) decide(now, room);
-    // walk in little bounces toward the target, gravity pulls him down
+    if (now > G.next && !G.busy && !drag && !G.held && !G.flying && !G.down) decide(now, room);
+    if (G.held) { /* follows your pointer (see carry) */ }
+    else if (G.flying) fly(dt, room);
+    else if (!G.down) walk(dt);
+    G.squash = Math.max(0, G.squash - dt * 6);
+    G.rot += (G.rotTo - G.rot) * Math.min(1, dt * 12);
+    const sx = 1 + G.squash * 0.18, sy = 1 - G.squash * 0.2, scale = weak() ? 0.82 : strong() ? 1.08 : 1;
+    $("guy").style.transform = `translate(${G.x}px, ${-G.y}px)`;
+    $("gbody").style.transform = `rotate(${G.rot}deg) scale(${sx * scale}, ${sy * scale})`;
+    $("guy").querySelector(".shadow").style.transform = `scale(${1 - Math.min(0.5, G.y / 80)})`;
+    eyes(now);
+    if (!G.busy && !drag) mouth(restingMouth());
+  }
+
+  // walk in little bounces toward the target; gravity pulls him down
+  function walk(dt) {
     const speed = weak() ? 18 : 45;
     if (Math.abs(G.tx - G.x) > 1) {
       G.x += Math.sign(G.tx - G.x) * Math.min(Math.abs(G.tx - G.x), speed * dt);
@@ -115,13 +158,27 @@
       G.vy -= 520 * dt; G.y += G.vy * dt;
       if (G.y <= 0) { G.y = 0; G.vy = 0; G.squash = 1; }
     }
-    G.squash = Math.max(0, G.squash - dt * 6);
-    const sx = 1 + G.squash * 0.18, sy = 1 - G.squash * 0.2, scale = weak() ? 0.82 : strong() ? 1.08 : 1;
-    $("guy").style.transform = `translate(${G.x}px, ${-G.y}px)`;
-    $("gbody").style.transform = `scale(${sx * scale}, ${sy * scale})`;
-    $("guy").querySelector(".shadow").style.transform = `scale(${1 - Math.min(0.5, G.y / 80)})`;
-    eyes(now);
-    if (!G.busy && !drag) mouth(restingMouth());
+  }
+  // thrown: flies, bounces off walls, ceiling and floor; a hard landing knocks him over
+  const ceiling = () => $("room").clientHeight - 9 - GW;
+  function fly(dt, room) {
+    G.vy -= 700 * dt; G.x += G.vx * dt; G.y += G.vy * dt;
+    G.rotTo = Math.max(-40, Math.min(40, G.vx * 0.06));
+    if (G.x < 0 || G.x > room) { G.x = Math.max(0, Math.min(room, G.x)); G.hardest = Math.max(G.hardest, Math.abs(G.vx)); G.vx = -G.vx * 0.55; bonk(); }
+    if (G.y > ceiling()) { G.y = ceiling(); G.vy = -Math.abs(G.vy) * 0.4; bonk(); }
+    if (G.y <= 0) {
+      G.y = 0; G.hardest = Math.max(G.hardest, -G.vy); G.squash = 1;
+      if (-G.vy > 140) { G.vy = -G.vy * 0.35; G.vx *= 0.6; SFX.thud(); }
+      else { G.vy = 0; G.vx = 0; G.flying = false; land(); }
+    }
+  }
+  function bonk() { SFX.thud(); G.squash = 0.8; }
+  function land() {
+    G.tx = G.x;
+    if (G.hardest < 300) { G.rotTo = 0; G.hardest = 0; return; }
+    G.down = true; G.hardest = 0; G.busy = 1;  // falls over, sees stars, gets back up
+    G.rotTo = G.rot >= 0 ? 90 : -90; mouth("flat"); fx(["💫", "⭐", "💫"], 3, "up"); SFX.dizzy();
+    setTimeout(() => { G.rotTo = 0; G.down = false; mouth("smile"); setTimeout(() => { jump(120); G.busy = 0; }, 250); }, 1400);
   }
 
   function decide(now, room) {
@@ -141,6 +198,12 @@
   function eyes(now) {
     const p = $("guy").querySelector(".pupils"), lids = $("guy").querySelector(".lids");
     let dx = Math.sign(G.tx - G.x) * 1.5, dy = 0;
+    if (G.pet) {  // a pet turns to face you (pet emoji look left, so mirror to look right)
+      const r = $("guy").getBoundingClientRect(), at = drag || (G.look && now - G.look.t < 4000 ? G.look : null);
+      const right = at ? at.x > r.left + r.width / 2 : G.tx > G.x + 1 ? true : G.tx < G.x - 1 ? false : G.right;
+      G.right = right; $("gpet").style.transform = right ? "scaleX(-1)" : "";
+      return;
+    }
     if (drag) { const r = $("guy").getBoundingClientRect(); dx = clamp((drag.x - (r.left + r.width / 2)) / 12); dy = clamp((drag.y - (r.top + r.height / 3)) / 12); }
     else if (G.look && now - G.look.t < 4000) { const r = $("guy").getBoundingClientRect(); dx = clamp((G.look.x - (r.left + r.width / 2)) / 25); dy = clamp((G.look.y - (r.top + r.height / 3)) / 25); }
     p.setAttribute("transform", `translate(${dx} ${dy})`);
@@ -149,9 +212,41 @@
   }
   const clamp = (v) => Math.max(-2.2, Math.min(2.2, v));
 
-  // ---------- touching him ----------
-  function poke(e) {
+  // ---------- touching him: a tap pokes, a drag carries him, letting go throws him ----------
+  let grip = null;
+  function hold(e) {
     e.preventDefault();
+    if (drag || G.down) return;
+    grip = { x0: e.clientX, y0: e.clientY, moved: false, trail: [] };
+    document.addEventListener("pointermove", carry);
+    document.addEventListener("pointerup", release, { once: true });
+  }
+  function carry(e) {
+    if (!grip) return;
+    if (!grip.moved && Math.hypot(e.clientX - grip.x0, e.clientY - grip.y0) < 4) return;
+    if (!grip.moved) { grip.moved = true; G.held = true; G.flying = false; G.vy = 0; mouth("open"); SFX.boing(); }
+    const r = $("room").getBoundingClientRect(), room = W() - GW;
+    G.x = Math.max(0, Math.min(room, e.clientX - r.left - GW / 2));
+    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (e.clientY + GW / 2)));
+    const now = performance.now();
+    grip.trail.push({ x: G.x, y: G.y, t: now }); grip.trail = grip.trail.filter((p) => now - p.t < 90);
+    const a = grip.trail[0], vx = grip.trail.length > 1 ? (G.x - a.x) / Math.max(0.016, (now - a.t) / 1000) : 0;
+    G.rotTo = Math.max(-35, Math.min(35, -vx * 0.05));  // he dangles behind your hand
+  }
+  function release() {
+    document.removeEventListener("pointermove", carry);
+    const g = grip; grip = null;
+    if (!g) return;
+    if (!g.moved) { poke(); return; }
+    G.held = false;
+    const now = performance.now(), a = g.trail[0];
+    const dt = a ? Math.max(0.016, (now - a.t) / 1000) : 1;
+    G.vx = a ? Math.max(-900, Math.min(900, (G.x - a.x) / dt)) : 0;
+    G.vy = a ? Math.max(-900, Math.min(900, (G.y - a.y) / dt)) : 0;
+    G.flying = true; G.hardest = 0;
+    if (Math.hypot(G.vx, G.vy) > 250) { SFX.whee(); mouth("grin"); }
+  }
+  function poke() {
     if (drag) return;
     G.busy = 1; jump(weak() ? 90 : 160); SFX.boing(); setTimeout(SFX.giggle, 150);
     mouth("grin"); fx(["❤️"], 1, "up");
@@ -246,6 +341,7 @@
   }
 
   window.Buddy = {
+    gear,
     render(stats) {
       B = stats.buddy ? { ...stats.buddy } : null;
       $("buddy").style.display = B ? "block" : "none";
