@@ -64,7 +64,7 @@
     const el = $("buddy");
     el.innerHTML = `<div class="room" id="room">
         <div class="bars" id="bbars"></div>
-        <div class="think" id="think"></div>
+        <div class="say" id="say"></div>
         <div class="guy" id="guy"><div class="shadow"></div><span class="gmilk" id="gmilk">🥛</span>
           <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><div class="pdirt" id="pdirt"></div><span class="gwatch" id="gwatch">⌚</span></div>
           <span class="fly f1"></span><span class="fly f2"></span></div>
@@ -112,7 +112,6 @@
     $("bbars").innerHTML = bar("🍖", B.food, 25) + bar("🫧", B.clean, 30) + bar("💪", B.strength, 35);
     $("meals").textContent = B.meals_left;
     $("tFood").classList.toggle("dis", !(B.meals_left > 0));
-    $("think").innerHTML = B.food < 25 ? "🍖" : weak() ? "💤" : "";
     $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.right ? " right" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
     if (!drag) G.cleanShown = B.clean;
     paintDirt();
@@ -175,6 +174,8 @@
     set($("guy").querySelector(".shadow"), `scale(${(1 - Math.min(0.5, G.y / 80)).toFixed(2)})`);
     $("guy").classList.toggle("idle", Math.abs(G.tx - G.x) <= 1 && G.y === 0 && !G.held && !G.flying && !G.down);
     eyes(now);
+    if (!nextChat) nextChat = now + rnd(4000, 8000);
+    chatter(now); placeBubble(now);
     if (!G.busy && !drag && !G.held) mouth(restingMouth());
   }
 
@@ -204,9 +205,52 @@
     }
   }
   function bonk() { SFX.thud(); G.squash = 0.8; }
+  // ---------- what he says: his needs every now and then, reactions at once, chatter when happy ----------
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const LINES = {
+    hungry: ["Feed me? 🍖", "My tummy is rumbling", "So hungry…", "Is it snack time? 🍖"],
+    hungryNoMeals: ["Go work, then feed me!", "Earn me a snack? 🍖", "Hungry… go ship something"],
+    dirty: ["I stink 🤢", "Scrub me pls 🧽", "Bath time?", "Something smells. It's me."],
+    weak: ["So tired… go work 💤", "I need you to work 💤", "Feeling weak…"],
+    poop: ["Oops 💩", "Clean that up? 💩", "Not my best moment 💩"],
+    happy: ["Let's ship! 🚀", "Feeling strong 💪", "You're crushing it", "Best day ever", "One more PR?", "I believe in you"],
+    poke: ["Hey!", "Hehe", "That tickles!", "Boop!", "Hi!"],
+    lift: ["Put me down!", "Whoa, high up!", "Wheee?"],
+    throw: ["Wheee!", "Aaaa!", "Yeet!"],
+    ouch: ["Ouch!", "My head…", "Again! Again!", "Seeing stars ⭐"],
+    eat: ["Yum!", "Delicious 😋", "More please!", "Nom nom"],
+    clean: ["So fresh ✨", "Squeaky clean!", "Ahh, better"],
+    noMeals: ["No snacks yet. Go work!", "Earn me a meal first"],
+    full: ["I'm full!", "No more, I'm stuffed"],
+  };
+  let sayUntil = 0, nextChat = 0;
+  function say(kind, ms = 3200) {
+    const el = $("say");
+    el.textContent = pick(LINES[kind]);
+    el.className = "say show" + (["hungry", "hungryNoMeals", "dirty", "weak", "poop"].includes(kind) ? " need" : "");
+    sayUntil = performance.now() + ms;
+  }
+  function chatter(now) {  // needs come up every 15-25 s until fixed; happy talk every 40-70 s
+    if (now < nextChat || now < sayUntil || G.held || G.flying || G.down) return;
+    const poopy = (B.poops || []).some((p) => !scooped.has(p.id));
+    const need = B.food < 25 ? (B.meals_left > 0 ? "hungry" : "hungryNoMeals") : B.clean < 30 ? "dirty" : weak() ? "weak" : poopy ? "poop" : null;
+    if (need) { say(need); nextChat = now + rnd(15000, 25000); return; }
+    if (mood() >= 75) say("happy");
+    nextChat = now + rnd(40000, 70000);
+  }
+  function placeBubble(now) {  // the bubble rides above his head and stays inside the room
+    const el = $("say");
+    if (now > sayUntil) { el.classList.remove("show"); return; }
+    const w = el.offsetWidth, roomW = $("room").clientWidth;
+    el.style.left = Math.max(2, Math.min(roomW - w - 2, G.x + GW / 2 - w / 2)) + "px";
+    el.style.bottom = 9 + GW + 2 + G.y + "px";
+    el.style.setProperty("--tail", Math.max(8, Math.min(w - 8, G.x + GW / 2 - parseFloat(el.style.left))) + "px");
+  }
+
   function land() {
     G.tx = G.x;
     if (G.hardest < 300) { G.rotTo = 0; G.hardest = 0; return; }
+    say("ouch");
     G.down = true; G.hardest = 0; G.busy = 1;  // falls over, sees stars, gets back up
     G.rotTo = G.rot >= 0 ? 90 : -90; mouth("flat"); fx(["💫", "⭐", "💫"], 3, "up"); SFX.dizzy();
     setTimeout(() => { G.rotTo = 0; G.down = false; mouth("smile"); setTimeout(() => { jump(120); G.busy = 0; }, 250); }, 1400);
@@ -270,6 +314,7 @@
     grip.moved = true; G.held = true; G.flying = false; G.vy = 0; mouth("open"); SFX.boing();
     $("guy").classList.add("dangling");
     place(x, y - 18);
+    say("lift", 2000);
   }
   function place(cx, cy) {
     const r = $("room").getBoundingClientRect(), room = W() - GW, e = { clientX: cx, clientY: cy };
@@ -296,7 +341,7 @@
     G.vx = Math.max(-900, Math.min(900, g.vx * keep));
     G.vy = Math.max(-900, Math.min(900, g.vy * keep));
     G.flying = true; G.hardest = 0;
-    if (Math.hypot(G.vx, G.vy) > 250) { SFX.whee(); mouth("grin"); }
+    if (Math.hypot(G.vx, G.vy) > 250) { SFX.whee(); mouth("grin"); say("throw", 1500); }
   }
   function cancelHold() {
     if (grip) { document.removeEventListener("pointermove", carry); clearTimeout(grip.timer); grip = null; G.held = false; G.flying = true; $("guy").classList.remove("dangling"); }
@@ -306,7 +351,7 @@
   function poke() {
     if (drag) return;
     G.busy = 1; jump(weak() ? 90 : 160); SFX.boing(); setTimeout(SFX.giggle, 150);
-    mouth("grin"); fx(["❤️"], 1, "up");
+    mouth("grin"); fx(["❤️"], 1, "up"); say("poke", 1800);
     setTimeout(() => (G.busy = 0), 700);
   }
 
@@ -325,6 +370,7 @@
   function nope() {
     G.busy = 1; mouth("frown");
     const g = $("guy"); g.classList.add("shake"); setTimeout(() => { g.classList.remove("shake"); G.busy = 0; }, 500);
+    say("noMeals", 2600);
     window.showInfoHTML(`<div class="name">No meals ready</div><div class="about">${B.next_meal_xp != null ? `Work ${fmt(B.next_meal_xp)} more XP for the next meal.` : `He ate all ${B.max_meals} today.`}</div>`);
   }
   function near(px, py, pad = 0) {
@@ -352,7 +398,7 @@
     const d = drag; drag = null; d.ghost.remove();
     if (d.kind === "food") {
       if (near(d.x, d.y, 22) && B.meals_left > 0 && B.food < 97) eat();
-      else if (near(d.x, d.y, 22)) { nope(); window.showInfoHTML(`<div class="name">He's full</div><div class="about">Try again when his 🍖 bar drops.</div>`); }
+      else if (near(d.x, d.y, 22)) { nope(); say("full", 2200); window.showInfoHTML(`<div class="name">He's full</div><div class="about">Try again when his 🍖 bar drops.</div>`); }
     }
     G.scrub = d.done ? 0 : G.scrub;
   }
@@ -361,13 +407,13 @@
     B.food = Math.min(100, B.food + B.meal); B.meals_left--;
     G.busy = 1; SFX.chomp(); SFX.yum();
     let i = 0; const t = setInterval(() => { mouth(i++ % 2 ? "chew" : "open"); if (i > 6) { clearInterval(t); mouth("grin"); jump(150); G.busy = 0; } }, 130);
-    fx(["❤️", "😋", "❤️"], 3, "up");
+    fx(["❤️", "😋", "❤️"], 3, "up"); say("eat", 2200);
     paintStats();
   }
   function washed() {
     if (B.clean <= 95) post({ action: "clean" });
     B.clean = 100; G.cleanShown = 100; G.scrub = 0;
-    SFX.sparkle(); fx(["✨", "✨", "🫧", "✨"], 4, "up");
+    SFX.sparkle(); fx(["✨", "✨", "🫧", "✨"], 4, "up"); say("clean", 2200);
     paintStats();
   }
   function foam(x, y) {

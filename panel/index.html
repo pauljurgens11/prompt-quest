@@ -269,7 +269,12 @@
   .fly { display: none; position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #111; box-shadow: 0 0 1px #fff; }
   .guy.filthy .fly { display: block; } .fly.f1 { left: 4px; top: 4px; animation: fly1 1.3s linear infinite; } .fly.f2 { right: 4px; top: 10px; animation: fly1 1.7s linear infinite reverse; }
   @keyframes fly1 { 25% { transform: translate(10px, -6px); } 50% { transform: translate(20px, 2px); } 75% { transform: translate(8px, 8px); } }
-  .think { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); font-size: 13px; animation: bob 1.6s ease-in-out infinite; z-index: 2; }
+  .say { position: absolute; left: 0; bottom: 60px; z-index: 3; max-width: 130px; padding: 2px 6px 3px; border-radius: 7px; pointer-events: none;
+         font-size: 12px; line-height: 1.05; color: #2a1608; background: #fffbea; border: 1px solid #000; box-shadow: 1px 1px 0 rgba(0,0,0,.5);
+         white-space: nowrap; opacity: 0; transform: translateY(4px) scale(.9); transition: opacity .18s, transform .18s; }
+  .say.show { opacity: 1; transform: none; } .say.need { background: #ffe1d6; }
+  .say::after { content: ""; position: absolute; left: var(--tail, 50%); bottom: -5px; width: 7px; height: 7px; margin-left: -4px;
+                background: inherit; border-right: 1px solid #000; border-bottom: 1px solid #000; transform: rotate(45deg); }
   .ghost { position: fixed; left: 0; top: 0; font-size: 20px; pointer-events: none; z-index: 30; filter: drop-shadow(1px 2px 0 rgba(0,0,0,.6)); }
   .foam { position: fixed; width: var(--s); height: var(--s); border-radius: 50%; pointer-events: none; z-index: 29;
           background: radial-gradient(circle at 35% 35%, #fff, rgba(220,240,255,.7) 60%, rgba(180,220,255,.3)); animation: foam .9s ease-out both; }
