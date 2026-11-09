@@ -113,7 +113,7 @@
     $("meals").textContent = B.meals_left;
     $("tFood").classList.toggle("dis", !(B.meals_left > 0));
     $("think").innerHTML = B.food < 25 ? "🍖" : weak() ? "💤" : "";
-    $("guy").className = "guy" + (G.pet ? " pet" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
+    $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.right ? " right" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
     if (!drag) G.cleanShown = B.clean;
     paintDirt();
     paintPoops();
@@ -167,20 +167,23 @@
     if (!(G.y >= 0)) G.y = 0;
     G.squash = Math.max(0, G.squash - dt * 6);
     G.rot += (G.rotTo - G.rot) * Math.min(1, dt * 12);
-    const sx = 1 + G.squash * 0.18 - (G.breath || 0), sy = 1 - G.squash * 0.2 + (G.breath || 0), scale = weak() ? 0.82 : strong() ? 1.08 : 1;
-    $("guy").style.transform = `translate(${G.x}px, ${-G.y}px)`;
-    $("gbody").style.transform = `rotate(${G.rot}deg) scale(${sx * scale}, ${sy * scale})`;
-    $("guy").querySelector(".shadow").style.transform = `scale(${1 - Math.min(0.5, G.y / 80)})`;
+    const sx = 1 + G.squash * 0.18, sy = 1 - G.squash * 0.2, scale = weak() ? 0.82 : strong() ? 1.08 : 1;
+    // whole pixels and only on change: sub-pixel moves every frame make WebKit redraw the emoji, which shimmers
+    set($("guy"), `translate(${Math.round(G.x)}px, ${-Math.round(G.y)}px)`);
+    set($("gbody"), `rotate(${Math.round(G.rot)}deg) scale(${(sx * scale).toFixed(2)}, ${(sy * scale).toFixed(2)})`);
+    set($("guy").querySelector(".shadow"), `scale(${(1 - Math.min(0.5, G.y / 80)).toFixed(2)})`);
+    $("guy").classList.toggle("idle", Math.abs(G.tx - G.x) <= 1 && G.y === 0 && !G.held && !G.flying && !G.down);
     eyes(now);
     if (!G.busy && !drag && !G.held) mouth(restingMouth());
   }
 
-  // walk in little bounces toward the target; gravity pulls him down
+
+  function set(el, t) { if (el._t !== t) { el._t = t; el.style.transform = t; } }
+  // walk toward the target with a waddle; gravity pulls him down
   function walk(dt, now) {
     const speed = weak() ? 12 : 26, moving = Math.abs(G.tx - G.x) > 1;
     if (moving) G.x += Math.sign(G.tx - G.x) * Math.min(Math.abs(G.tx - G.x), speed * dt);
     G.rotTo = moving ? Math.sin(now / 110) * 6 : 0;  // a waddle while walking, still when standing
-    G.breath = moving ? 0 : Math.sin(now / 700) * 0.025;  // and a slow breath when idle
     if (G.y > 0 || G.vy > 0) {
       G.vy -= 520 * dt; G.y += G.vy * dt;
       if (G.y <= 0) { G.y = 0; G.vy = 0; G.squash = 1; }
@@ -232,7 +235,7 @@
       let want = G.right;
       if (Math.abs(G.tx - G.x) > 1 && !drag) want = G.tx > G.x;
       else if (at) { const off = at.x - (r.left + r.width / 2); if (off > 24) want = true; else if (off < -24) want = false; }
-      if (want !== G.right && now - (G.turnedAt || 0) > 1000) { G.right = want; G.turnedAt = now; $("gpet").style.transform = want ? "scaleX(-1)" : ""; }
+      if (want !== G.right && now - (G.turnedAt || 0) > 1000) { G.right = want; G.turnedAt = now; $("guy").classList.toggle("right", want); }
       return;
     }
     if (drag) { const r = $("guy").getBoundingClientRect(); dx = clamp((drag.x - (r.left + r.width / 2)) / 12); dy = clamp((drag.y - (r.top + r.height / 3)) / 12); }
