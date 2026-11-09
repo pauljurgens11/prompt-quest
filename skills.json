@@ -647,7 +647,7 @@
         "rarity": "common",
         "kind": "skin",
         "weight": 10,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel. Equip it in your bag.",
         "vars": {
           "stone-hi": "#4f6b43",
           "stone": "#36502f",
@@ -656,7 +656,20 @@
           "tile-hi": "#476039",
           "tile": "#2c4024",
           "tile-end": "#22331c",
-          "tile-lo": "#111a0b"
+          "tile-lo": "#111a0b",
+          "accent": "#9be36a",
+          "accent-rgb": "155,227,106",
+          "accent-hi": "#c8f5a0",
+          "accent-lo": "#5fae3a",
+          "accent-ink": "#0f1a08",
+          "ink": "#070c05",
+          "ink-rgb": "7,12,5",
+          "muted": "#b5c9a0",
+          "muted-2": "#8fa47c",
+          "xp-a": "#b8f08a",
+          "xp-b": "#4f8f2a",
+          "bar-bg": "linear-gradient(180deg, #5f8250, #2c4227)",
+          "bar-edge": "#9be36a"
         }
       },
       {
@@ -666,7 +679,7 @@
         "rarity": "common",
         "kind": "skin",
         "weight": 10,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel. Equip it in your bag.",
         "vars": {
           "stone-hi": "#a08355",
           "stone": "#7d6440",
@@ -675,7 +688,20 @@
           "tile-hi": "#8a7048",
           "tile": "#5f4b2e",
           "tile-end": "#4f3e25",
-          "tile-lo": "#2a1f10"
+          "tile-lo": "#2a1f10",
+          "accent": "#ffcf7a",
+          "accent-rgb": "255,207,122",
+          "accent-hi": "#ffe6b0",
+          "accent-lo": "#d9a046",
+          "accent-ink": "#2a1a05",
+          "ink": "#120c05",
+          "ink-rgb": "18,12,5",
+          "muted": "#e3cfa6",
+          "muted-2": "#b9a27a",
+          "xp-a": "#ffdc94",
+          "xp-b": "#c98a2e",
+          "bar-bg": "linear-gradient(180deg, #b8996a, #6a5434)",
+          "bar-edge": "#ffcf7a"
         }
       },
       {
@@ -685,7 +711,7 @@
         "rarity": "rare",
         "kind": "skin",
         "weight": 8,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel, with falling snow. Equip it in your bag.",
         "vars": {
           "stone-hi": "#6f8fa8",
           "stone": "#4a6a84",
@@ -695,8 +721,23 @@
           "tile": "#365166",
           "tile-end": "#2b4255",
           "tile-lo": "#14212c",
-          "orange": "#9fe3ff"
-        }
+          "orange": "#9fe3ff",
+          "accent": "#9fe3ff",
+          "accent-rgb": "159,227,255",
+          "accent-hi": "#d6f5ff",
+          "accent-lo": "#5bb8e0",
+          "accent-ink": "#06202c",
+          "ink": "#050b10",
+          "ink-rgb": "5,11,16",
+          "muted": "#b8d4e6",
+          "muted-2": "#8aa9bd",
+          "xp-a": "#bff0ff",
+          "xp-b": "#3a9ccc",
+          "bar-bg": "linear-gradient(180deg, #86a9c4, #3d5a72)",
+          "bar-edge": "#9fe3ff",
+          "yellow": "#e8fbff"
+        },
+        "effect": "snow"
       },
       {
         "id": "skin_obsidian",
@@ -705,7 +746,7 @@
         "rarity": "rare",
         "kind": "skin",
         "weight": 8,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel. Equip it in your bag.",
         "vars": {
           "stone-hi": "#3a3a44",
           "stone": "#24242c",
@@ -714,7 +755,20 @@
           "tile-hi": "#33333d",
           "tile": "#1d1d24",
           "tile-end": "#16161b",
-          "tile-lo": "#050507"
+          "tile-lo": "#050507",
+          "accent": "#b78cff",
+          "accent-rgb": "183,140,255",
+          "accent-hi": "#dcc7ff",
+          "accent-lo": "#7c52d6",
+          "accent-ink": "#12062a",
+          "ink": "#040405",
+          "ink-rgb": "4,4,5",
+          "muted": "#b9b4c8",
+          "muted-2": "#8a8598",
+          "xp-a": "#c9a8ff",
+          "xp-b": "#5a2fb0",
+          "bar-bg": "linear-gradient(180deg, #4a4a58, #1c1c22)",
+          "bar-edge": "#b78cff"
         }
       },
       {
@@ -724,7 +778,7 @@
         "rarity": "ultra",
         "kind": "skin",
         "weight": 8,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel, with rising embers. Equip it in your bag.",
         "vars": {
           "stone-hi": "#7a3a22",
           "stone": "#552414",
@@ -734,8 +788,23 @@
           "tile": "#43190c",
           "tile-end": "#361309",
           "tile-lo": "#180602",
-          "orange": "#ffb347"
-        }
+          "orange": "#ffb347",
+          "accent": "#ff7a2e",
+          "accent-rgb": "255,122,46",
+          "accent-hi": "#ffb37a",
+          "accent-lo": "#d9480f",
+          "accent-ink": "#2a0a00",
+          "ink": "#0d0402",
+          "ink-rgb": "13,4,2",
+          "muted": "#e6b39a",
+          "muted-2": "#b58670",
+          "xp-a": "#ffb347",
+          "xp-b": "#d9480f",
+          "bar-bg": "linear-gradient(180deg, #8f4528, #461c0f)",
+          "bar-edge": "#ff7a2e",
+          "yellow": "#ffd27a"
+        },
+        "effect": "embers"
       },
       {
         "id": "skin_abyss",
@@ -744,7 +813,7 @@
         "rarity": "ultra",
         "kind": "skin",
         "weight": 8,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel, with drifting mist. Equip it in your bag.",
         "vars": {
           "stone-hi": "#5a3d7a",
           "stone": "#3b2556",
@@ -754,8 +823,22 @@
           "tile": "#2c1a42",
           "tile-end": "#231436",
           "tile-lo": "#0f0619",
-          "orange": "#d9a3ff"
-        }
+          "orange": "#d9a3ff",
+          "accent": "#d9a3ff",
+          "accent-rgb": "217,163,255",
+          "accent-hi": "#f0d6ff",
+          "accent-lo": "#9b5ce0",
+          "accent-ink": "#1c0630",
+          "ink": "#07030d",
+          "ink-rgb": "7,3,13",
+          "muted": "#c9b3dc",
+          "muted-2": "#9a86ad",
+          "xp-a": "#e2b8ff",
+          "xp-b": "#7a3fc0",
+          "bar-bg": "linear-gradient(180deg, #6a4a8f, #2f1d46)",
+          "bar-edge": "#d9a3ff"
+        },
+        "effect": "mist"
       },
       {
         "id": "skin_gilded",
@@ -764,7 +847,7 @@
         "rarity": "extraordinary",
         "kind": "skin",
         "weight": 8,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel, with a gold shimmer. Equip it in your bag.",
         "vars": {
           "stone-hi": "#b8902e",
           "stone": "#8a6a1c",
@@ -774,8 +857,23 @@
           "tile": "#6e5412",
           "tile-end": "#5b450d",
           "tile-lo": "#2e2104",
-          "orange": "#fff1a8"
-        }
+          "orange": "#fff1a8",
+          "accent": "#fff1a8",
+          "accent-rgb": "255,241,168",
+          "accent-hi": "#fffbe0",
+          "accent-lo": "#e8c04a",
+          "accent-ink": "#2e2104",
+          "ink": "#120d02",
+          "ink-rgb": "18,13,2",
+          "muted": "#f0dfa8",
+          "muted-2": "#c4b07a",
+          "xp-a": "#fff1a8",
+          "xp-b": "#c99a1c",
+          "bar-bg": "linear-gradient(180deg, #d4ad4a, #735714)",
+          "bar-edge": "#fff1a8",
+          "yellow": "#fffbd0"
+        },
+        "effect": "shimmer"
       },
       {
         "id": "skin_void",
@@ -784,7 +882,7 @@
         "rarity": "extraordinary",
         "kind": "skin",
         "weight": 8,
-        "about": "A new look for the whole panel. Equip it in your bag.",
+        "about": "Restyles the whole panel, with a flickering neon edge. Equip it in your bag.",
         "vars": {
           "stone-hi": "#1d2a4a",
           "stone": "#101833",
@@ -795,8 +893,23 @@
           "tile-end": "#08102a",
           "tile-lo": "#02040f",
           "orange": "#ff4fd8",
-          "text": "#c9f6ff"
-        }
+          "text": "#c9f6ff",
+          "accent": "#ff4fd8",
+          "accent-rgb": "255,79,216",
+          "accent-hi": "#ff9be9",
+          "accent-lo": "#c41fa6",
+          "accent-ink": "#ffffff",
+          "ink": "#02030a",
+          "ink-rgb": "2,3,10",
+          "muted": "#9fc9e6",
+          "muted-2": "#6f93ad",
+          "xp-a": "#3ff0ff",
+          "xp-b": "#ff4fd8",
+          "bar-bg": "linear-gradient(180deg, #1d2a4a, #000000)",
+          "bar-edge": "#ff4fd8",
+          "yellow": "#3ff0ff"
+        },
+        "effect": "neon"
       },
       {
         "id": "charm_clover",
