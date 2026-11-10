@@ -46,7 +46,7 @@
     <g class="mouth">${MOUTH.smile}</g></svg>`;
 
   // ---------- state of the scene ----------
-  const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0, lastFrame: 0 };
+  const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0, lastFrame: 0, knock: 0 };
   const W = () => $("room").clientWidth, GW = 46;
 
   function build() {
@@ -59,7 +59,6 @@
         <div class="floor"></div></div>`;
     $("guy").onpointerdown = hold;
     document.addEventListener("pointermove", (e) => {
-      if (e.buttons === 0 && grip) cancelHold();  // the button was let go somewhere we did not hear it
       const r = $("room").getBoundingClientRect();
       if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) G.look = { x: e.clientX, y: e.clientY, t: performance.now() };
     });
@@ -190,9 +189,13 @@
     G.tx = G.x;
     if (G.hardest < 300) { G.rotTo = 0; G.hardest = 0; return; }
     say("ouch");
+    const k = ++G.knock;  // picking him up cuts this short (see hold)
     G.down = true; G.hardest = 0; G.busy = 1;  // falls over, sees stars, gets back up
     G.rotTo = G.rot >= 0 ? 90 : -90; mouth("flat"); fx(["💫", "⭐", "💫"], 3, "up"); SFX.dizzy();
-    setTimeout(() => { G.rotTo = 0; G.down = false; mouth("smile"); setTimeout(() => { jump(120); G.busy = 0; }, 250); }, 1400);
+    setTimeout(() => {
+      if (k !== G.knock) return;
+      G.rotTo = 0; G.down = false; mouth("smile"); setTimeout(() => { if (k === G.knock) { jump(120); G.busy = 0; } }, 250);
+    }, 1400);
   }
 
   function decide(now, room) {
@@ -230,14 +233,20 @@
   const clamp = (v) => Math.max(-2.2, Math.min(2.2, v));
 
   // ---------- touching him: a tap pokes, a drag carries him, letting go throws him ----------
+  // The guy captures the pointer, so a flick that ends past the panel edge still reaches release.
+  // Throw speed is your hand's speed over its last 80 ms: a pause before letting go is a gentle drop.
   let grip = null;
+  const WINDOW = 80;
   function hold(e) {
     e.preventDefault();
-    if (G.down) return;
-    grip = { x0: e.clientX, y0: e.clientY, moved: false, vx: 0, vy: 0, lx: e.clientX, ly: e.clientY, lt: performance.now() };
+    if (grip) return;
+    if (G.down) { G.knock++; G.down = false; G.busy = 0; G.rotTo = 0; }  // grab him even while he sees stars
+    const g = $("guy");
+    try { g.setPointerCapture(e.pointerId); } catch (err) { /* no capture: the window still sends most moves */ }
+    grip = { x0: e.clientX, y0: e.clientY, moved: false, pts: [[performance.now(), e.clientX, e.clientY]] };
     grip.timer = setTimeout(() => grip && !grip.moved && lift(grip.x0, grip.y0), 250);  // hold still: up he goes
-    document.addEventListener("pointermove", carry);
-    document.addEventListener("pointerup", release, { once: true });
+    g.onpointermove = carry;
+    g.onpointerup = g.onpointercancel = g.onlostpointercapture = release;
   }
   function carry(e) {
     if (!grip) return;
@@ -247,41 +256,41 @@
     place(e.clientX, e.clientY);
   }
   function lift(x, y) {
-    grip.moved = true; G.held = true; G.flying = false; G.vy = 0; mouth("open"); SFX.boing();
+    grip.moved = true; G.held = true; G.flying = false; G.vx = G.vy = 0; mouth("open"); SFX.boing();
     $("guy").classList.add("dangling");
     place(x, y - 18);
     say("lift", 2000);
   }
   function place(cx, cy) {
-    const r = $("room").getBoundingClientRect(), room = W() - GW, e = { clientX: cx, clientY: cy };
-    G.x = Math.max(0, Math.min(room, e.clientX - r.left - GW / 2));
-    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (e.clientY + GW / 2)));
-    G.rotTo = Math.max(-35, Math.min(35, -grip.vx * 0.05));  // he dangles behind your hand
+    const r = $("room").getBoundingClientRect(), room = W() - GW;
+    G.x = Math.max(0, Math.min(room, cx - r.left - GW / 2));
+    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (cy + GW / 2)));
+    G.rotTo = Math.max(-35, Math.min(35, -velocity()[0] * 0.05));  // he dangles behind your hand
   }
-  // your hand's speed, from the real pointer (not his clamped position), smoothed over every move
   function track(x, y) {
-    const now = performance.now(), dt = Math.max(0.008, (now - grip.lt) / 1000);
-    grip.vx = grip.vx * 0.5 + ((x - grip.lx) / dt) * 0.5;
-    grip.vy = grip.vy * 0.5 + (-(y - grip.ly) / dt) * 0.5;
-    grip.lx = x; grip.ly = y; grip.lt = now;
+    const now = performance.now();
+    grip.pts.push([now, x, y]);
+    while (grip.pts.length > 2 && now - grip.pts[1][0] > WINDOW) grip.pts.shift();  // keep one sample older than the window
   }
-  function release() {
-    document.removeEventListener("pointermove", carry);
+  function velocity() {  // px/s, up is positive; from the oldest sample in the window to the newest
+    const p = grip.pts, a = p[0], b = p[p.length - 1], now = performance.now();
+    if (p.length < 2 || now - b[0] > WINDOW) return [0, 0];  // no movement lately: a drop, not a throw
+    const dt = Math.max(0.016, (b[0] - a[0]) / 1000);
+    return [(b[1] - a[1]) / dt, -(b[2] - a[2]) / dt];
+  }
+  function release(e) {
     const g = grip; grip = null;
     if (!g) return;
-    clearTimeout(g.timer); $("guy").classList.remove("dangling");
-    if (!g.moved) { poke(); return; }
-    G.held = false;
-    // still moving when you let go: full throw; a clear pause first (over 60 ms) fades it to a drop
-    const idle = performance.now() - g.lt, keep = idle < 60 ? 1 : Math.max(0, 1 - (idle - 60) / 120);
-    G.vx = Math.max(-900, Math.min(900, g.vx * keep));
-    G.vy = Math.max(-900, Math.min(900, g.vy * keep));
-    G.flying = true; G.hardest = 0;
+    const el = $("guy");
+    el.onpointermove = el.onpointerup = el.onpointercancel = el.onlostpointercapture = null;
+    clearTimeout(g.timer); el.classList.remove("dangling");
+    if (!g.moved) { if (e.type === "pointerup") poke(); return; }
+    grip = g; if (e.clientX || e.clientY) track(e.clientX, e.clientY);
+    const [vx, vy] = velocity(); grip = null;
+    G.held = false; G.flying = true; G.hardest = 0;
+    G.vx = Math.max(-900, Math.min(900, vx));
+    G.vy = Math.max(-900, Math.min(900, vy));
     if (Math.hypot(G.vx, G.vy) > 250) { SFX.whee(); mouth("grin"); say("throw", 1500); }
-  }
-  function cancelHold() {
-    if (grip) { document.removeEventListener("pointermove", carry); clearTimeout(grip.timer); grip = null; G.held = false; G.flying = true; $("guy").classList.remove("dangling"); }
-    G.busy = 0;
   }
   function poke() {
     G.busy = 1; jump(160); SFX.boing(); setTimeout(SFX.giggle, 150);
