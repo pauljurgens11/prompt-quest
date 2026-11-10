@@ -1149,6 +1149,12 @@
       "cost": 600
     },
     {
+      "id": "beer",
+      "name": "Afternoon beer",
+      "icon": "🍺",
+      "cost": 1000
+    },
+    {
       "id": "dinner",
       "name": "Dinner out, guilt-free",
       "icon": "🍣",
