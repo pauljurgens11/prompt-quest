@@ -234,13 +234,16 @@
     $("overlay").className = "overlay show";
     paintBag();
   }
-  function paintBag() {
-    const l = L(), ov = $("overlay");
+  let paintedTab = null;
+  function paintBag() {  // a repaint of the same tab (equip, buy, claim) keeps your scroll; a new tab starts at the top
+    const l = L(), ov = $("overlay"), keep = paintedTab === tab && $("bagList") ? $("bagList").scrollTop : 0;
+    paintedTab = tab;
     const tabs = [["items", "Items"], ["collection", "Collection"], ["shop", "Shop"]]
       .map(([id, n]) => `<span class="tab ${tab === id ? "on" : ""}" data-tab="${id}">${n}</span>`).join("");
     ov.innerHTML = `<div class="bag"><div class="bagTop">${tabs}<span class="x" id="bagX">✕</span></div>
       <div class="coins">🪙 ${fmt(l.gold)} coins</div><div class="list" id="bagList">${bagList()}</div></div>`;
     ov.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { tab = t.dataset.tab; confirmBuy = null; paintBag(); }));
+    $("bagList").scrollTop = keep;
     $("bagX").onclick = closeOverlay;
     ov.querySelectorAll("[data-act]").forEach((b) => (b.onclick = () => act(JSON.parse(b.dataset.act), b)));
     ov.querySelectorAll(".set").forEach((set) => {  // hovering a piece names it in its card
