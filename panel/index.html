@@ -218,7 +218,7 @@
 
   /* ---- the lil guy: his room, his body, his moods ---- */
   #buddy { display: none; margin-bottom: 4px; }
-  .room { position: relative; height: 140px; border-radius: 3px; border: 1px solid #000; overflow: hidden;
+  .room { position: relative; height: 160px; border-radius: 3px; border: 1px solid #000; overflow: hidden;
           background: radial-gradient(ellipse at 50% 120%, rgba(var(--accent-rgb),.18), transparent 60%), rgba(var(--ink-rgb),.6);
           box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); touch-action: none; }
   .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; background: linear-gradient(180deg, var(--tile-hi), var(--tile-lo)); border-top: 1px solid #000; }
@@ -236,9 +236,10 @@
   /* a pet as the lil guy: the emoji, its dirt, the watch it wears, its milk on the floor */
   .gpet { display: none; position: absolute; left: 0; right: 0; bottom: -5px; font-size: 38px; line-height: 1; text-align: center; }
   .gface { position: absolute; inset: 0; } .guy.right .gface { scale: -1 1; }  /* pets look left; mirrored, the pet and its hat and watch look right */
-  .gpet svg { display: block; margin: 0 auto; overflow: visible; }
-  .guy.float { animation: hover 2.6s ease-in-out infinite; } @keyframes hover { 50% { translate: 0 -5px; } }
-  .pico { display: inline-block; vertical-align: middle; line-height: 0; } .pico svg { overflow: visible; }
+  /* a 3D pet turns instead of mirroring; its canvas may be wider than the body you grab */
+  .guy.p3.right .gface { scale: 1 1; } .guy.p3 .gpet { bottom: 0; display: flex; justify-content: center; }
+  .gpet canvas { flex: none; display: block; image-rendering: pixelated; pointer-events: none; }
+  .p3img { image-rendering: pixelated; vertical-align: middle; }
   .guy, .gbody { will-change: transform; }  /* drawn once, then moved as a picture: no re-drawing the emoji */
   .guy.idle .gbody { animation: breathe 2.8s ease-in-out infinite; } @keyframes breathe { 50% { scale: 1.03 .97; } }
   .guy.pet .gpet { display: block; } .guy.pet .gsvg { display: none; }
@@ -314,7 +315,8 @@
 </div>
 <div class="banner" id="banner"></div>
 <div class="overlay" id="overlay"></div>
-<script src="pets.js"></script>
+<script src="lowpoly.js"></script>
+<script src="pets3d.js"></script>
 <script src="loot.js"></script>
 <script src="buddy.js"></script>
 <script>
@@ -505,9 +507,10 @@
       return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}">${one}${one}</span>`; };
     const hat = (id, cls) => { const d = D(id);
       return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}"><i class="tint" style="--tint:${d.tint || "none"};${d.flip ? "scale:-1 1;" : ""}rotate:${d.tilt || 0}deg">${d.icon}</i></span>`; };
-    if (eq.pet) h += ` <span class="petw"><span class="petb">${window.Pets && Pets.has(eq.pet) ? Pets.icon(eq.pet, 16) : D(eq.pet).icon}</span>${eq.watch ? gear(eq.watch, "wrist", "⌚") : ""}${eq.shoes ? feet(eq.shoes, "feet") : ""}${eq.hat ? hat(eq.hat, "hhat") : ""}</span>`;
+    if (eq.pet && window.Pets3D && Pets3D.has(eq.pet)) h += ` <span class="petb">${Pets3D.icon(eq.pet, 20, eq)}</span>`;  // gear is part of the model
+    else if (eq.pet) h += ` <span class="petw"><span class="petb">${D(eq.pet).icon}</span>${eq.watch ? gear(eq.watch, "wrist", "⌚") : ""}${eq.shoes ? feet(eq.shoes, "feet") : ""}${eq.hat ? hat(eq.hat, "hhat") : ""}</span>`;
     else { if (eq.hat) h += " " + hat(eq.hat, "hhat solo"); if (eq.watch) h += " " + gear(eq.watch, "wrist solo", "⌚"); if (eq.shoes) h += " " + feet(eq.shoes, "feet solo"); }
-    if (eq.milk) h += gear(eq.milk, "milkg", "🥛");
+    if (eq.milk) h += window.Pets3D && Pets3D.hasGear(eq.milk) ? ` ${Pets3D.gearIcon(eq.milk, 16)}` : gear(eq.milk, "milkg", "🥛");
     $("title").innerHTML = h;
     const root = document.documentElement.style, vars = eq.skin ? D(eq.skin).vars || {} : {};
     SKIN_VARS.forEach((k) => (vars[k] ? root.setProperty("--" + k, vars[k]) : root.removeProperty("--" + k)));

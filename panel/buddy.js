@@ -48,7 +48,6 @@
   // ---------- state of the scene ----------
   const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0, lastFrame: 0, knock: 0 };
   const W = () => $("room").clientWidth;
-  const S = 1.5;  // pets are drawn small and shown big: the pet is the centrepiece of the room
   let GW = 46, GH = 46;  // his size: the blob's, or the equipped pet's
 
   function build() {
@@ -94,38 +93,32 @@
     });
     if (!eq.milk) { const m = $("gmilk"); m.style.display = ""; m.className = "gmilk empty"; m.title = "No milk yet: find one in a chest"; }
     else $("gmilk").classList.remove("empty");
+    if (G.p3) [$("ghat"), $("gwatch"), $("gfeet")].forEach((el) => (el.style.display = "none"));
+    $("gmilk").innerHTML = G.p3 && eq.milk && Pets3D.hasGear(eq.milk) ? Pets3D.gearIcon(eq.milk, 26) : "🥛";
     paintClass();
   }
 
-  // the pet's drawing at room scale, and its hat, watch and shoes on its own head, wrist and feet
+  // the equipped pet as a low-poly 3D model; its hat, shoes and watch are part of the model, on its own head, feet and wrist
   function body(id) {
-    const m = id && window.Pets && Pets.has(id) ? Pets.meta(id) : null, guy = $("guy");
-    G.meta = m;
-    GW = m ? Math.round(m.w * S) : 46; GH = m ? Math.round(m.h * S) : 46;
+    const guy = $("guy"), p3 = id && window.Pets3D && Pets3D.has(id) ? Pets3D.make(id) : null;
+    G.p3 = p3; G.meta = p3 ? { float: 0, gait: p3.gait } : null;
+    if (p3) Pets3D.dress(p3, Loot.equipped());
+    const ds = p3 ? Math.min(Pets3D.DS, ($("room").clientHeight - 16) / p3.H) : 1;  // big pets shrink a little to fit the room
+    const cw = p3 ? Math.round(p3.W * ds) : 46, ch = p3 ? Math.round(p3.H * ds) : 46;
+    GW = p3 ? Math.round(cw * 0.6) : 46; GH = ch;  // you grab his body; tails and wings may reach past it
     guy.style.width = $("gbody").style.width = GW + "px";
     guy.style.height = $("gbody").style.height = GH + "px";
-    $("gpet").innerHTML = m ? Pets.svg(id, GH) : id ? Loot.drop(id).icon : "";
-    const fs = m ? Math.max(9, Math.min(16, GW * 0.22)) : 14, lift = m ? Math.round(fs * 0.6) : 7;  // shoe size, and how far he stands up on them
-    guy.style.setProperty("--lift", lift + "px");
-    guy.style.bottom = 9 + (m ? m.float : 0) + "px";
-    guy.querySelector(".shadow").style.bottom = -3 - (m ? m.float : 0) + "px";
-    $("gmilk").style.left = m ? "-18px" : "";  // the glass stands clear of small pets
-    const hat = $("ghat"), watch = $("gwatch"), feet = $("gfeet");
-    [hat, watch, feet].forEach((el) => el.removeAttribute("style"));
-    feet.querySelectorAll(".gshoe").forEach((s) => s.removeAttribute("style"));
-    if (!m) return;
-    const [hx, hy, hs] = m.hat, size = hs * S * 1.25;  // the emoji draws the hat in the middle of its box: sink the box onto the head
-    Object.assign(hat.style, { left: hx * S - size / 2 + "px", right: "auto", width: size + "px", top: hy * S - size * 0.42 + "px", fontSize: size + "px" });
-    const ws = Math.max(9, Math.min(14, GW * 0.16));  // the watch grows with the pet: a dot on Pebble, a real piece on the dragon
-    Object.assign(watch.style, { left: m.wrist[0] * S - ws / 2 + "px", top: m.wrist[1] * S - ws / 2 + "px", right: "auto", bottom: "auto", fontSize: ws + "px", lineHeight: 1 });
-    // the shoe layer is mirrored whenever the pet is not (the shoe emoji points the other way), so place from the far edge
-    const [fx1, fx2, fy] = m.feet;
-    Object.assign(feet.style, { bottom: Math.round((m.h - fy) * S + lift - fs * 0.85) + "px", height: fs + "px" });
-    feet.querySelectorAll(".gshoe").forEach((s, i) => Object.assign(s.style, { left: GW - [fx1, fx2][i] * S - fs / 2 + "px", fontSize: fs + "px" }));
+    $("gpet").innerHTML = p3 ? `<canvas width="${p3.W}" height="${p3.H}" style="width:${cw}px;height:${ch}px"></canvas>` : id ? Loot.drop(id).icon : "";
+    G.ctx = p3 ? $("gpet").firstChild.getContext("2d") : null;
+    guy.style.setProperty("--lift", p3 ? "0px" : "7px");
+    guy.style.bottom = "9px"; guy.querySelector(".shadow").style.bottom = "-3px";
+    $("gmilk").style.left = p3 ? -Math.round(cw * 0.2) - 18 + "px" : "";
+    [$("ghat"), $("gwatch"), $("gfeet")].forEach((el) => el.removeAttribute("style"));
+    $("gfeet").querySelectorAll(".gshoe").forEach((sh) => sh.removeAttribute("style"));
   }
 
   function paintClass() {
-    $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.shod ? " shod" : "") + (G.right ? " right" : "") + (G.meta && G.meta.float ? " float" : "");
+    $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.shod ? " shod" : "") + (G.right ? " right" : "") + (G.p3 ? " p3" : "");
   }
 
   function mouth(m) {  // a pet shows it with its body instead (lean in, chomp, droop), styled by data-m
@@ -160,6 +153,11 @@
     $("guy").classList.toggle("idle", Math.abs(G.tx - G.x) <= 1 && G.y === 0 && !G.held && !G.flying && !G.down);
     $("guy").classList.toggle("walking", Math.abs(G.tx - G.x) > 1 && G.y === 0 && !G.held && !G.flying && !G.down);
     eyes(now);
+    if (G.p3) {  // turn, don't flip: ease toward a three-quarter view facing left or right
+      const want = G.right ? Math.PI - 0.5 : 0.5;
+      G.yaw = G.yaw === undefined ? want : G.yaw + (want - G.yaw) * Math.min(1, dt * 7);
+      Pets3D.draw(G.p3, G.ctx, now / 1000, { yaw: G.yaw, walk: Math.abs(G.tx - G.x) > 1 && G.y === 0 && !G.held && !G.flying, held: G.held, fly: G.flying, air: G.y > 0 });
+    }
     if (!nextChat) nextChat = now + rnd(4000, 8000);
     chatter(now); placeBubble(now);
     if (!G.busy && !G.held) mouth(restingMouth());
@@ -179,7 +177,7 @@
     }
   }
   // thrown: flies, bounces off walls, ceiling and floor; a hard landing knocks him over
-  const ceiling = () => $("room").clientHeight - 9 - GH - (G.meta ? G.meta.float : 0);
+  const ceiling = () => $("room").clientHeight - 9 - GH * (G.p3 ? 0.55 : 1);  // a 3D pet's canvas has headroom for hats and wings
   function fly(dt, room) {
     G.vy -= 700 * dt; G.x += G.vx * dt; G.y += G.vy * dt;
     G.rotTo = Math.max(-40, Math.min(40, G.vx * 0.06));
@@ -323,7 +321,7 @@
     if (now > sayUntil) { el.classList.remove("show"); return; }
     const w = el.offsetWidth, roomW = $("room").clientWidth;
     el.style.left = Math.max(2, Math.min(roomW - w - 2, G.x + GW / 2 - w / 2)) + "px";
-    el.style.bottom = 9 + GH + (G.meta ? G.meta.float : 0) + 2 + G.y + "px";
+    el.style.bottom = Math.min($("room").clientHeight - el.offsetHeight - 2, 9 + GH * (G.p3 ? 0.78 : 1) + 2 + G.y) + "px";  // above his head, inside the room
     el.style.setProperty("--tail", Math.max(8, Math.min(w - 8, G.x + GW / 2 - parseFloat(el.style.left))) + "px");
   }
 
@@ -406,7 +404,7 @@
   function place(cx, cy) {
     const r = $("room").getBoundingClientRect(), room = W() - GW;
     G.x = Math.max(0, Math.min(room, cx - r.left - GW / 2));
-    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (G.meta ? G.meta.float : 0) - (cy + GH / 2)));
+    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (cy + GH * (G.p3 ? 0.3 : 0.5))));  // you hold him by the body
     G.rotTo = Math.max(-35, Math.min(35, -velocity()[0] * 0.05));  // he dangles behind your hand
   }
   function track(x, y) {

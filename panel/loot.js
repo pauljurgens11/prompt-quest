@@ -183,7 +183,8 @@
   }
 
   // an icon in its own colour: a shoe's tint (skills.json) recolours the shared emoji
-  const ico = (d, h = 20) => d.kind === "pet" && window.Pets && Pets.has(d.id) ? Pets.icon(d.id, h)
+  const ico = (d, h = 20) => d.kind === "pet" && window.Pets3D && Pets3D.has(d.id) ? Pets3D.icon(d.id, h)
+    : window.Pets3D && Pets3D.hasGear(d.id) ? Pets3D.gearIcon(d.id, h)
     : d.tint ? `<span class="tint" style="--tint:${d.tint}">${d.icon}</span>` : d.icon;
 
   function reveal(win, got, r, el) {
