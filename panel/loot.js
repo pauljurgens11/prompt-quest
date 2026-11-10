@@ -10,7 +10,7 @@
   const drop = (id) => L().config.drops.find((d) => d.id === id);
   const tierCfg = (id) => L().config.tiers.find((t) => t.id === id);
   const sets = () => L().config.sets || [];
-  const members = (st) => L().config.drops.filter((d) => d.kind === st.kind);
+  const members = (st) => L().config.drops.filter((d) => d.kind === st.kind && !d.starter);
   const setOf = (d) => sets().find((st) => st.kind === d.kind);
   const pct = (x) => `+${Math.round(x * 100)}%`;
   const skillName = (id) => (id === "all" ? "every skill" : (L().skill_names || {})[id] || id);
@@ -105,7 +105,7 @@
   // ---------- unboxing ----------
   function card(d, extra = "") {
     const r = rarity(d.rarity);
-    return `<div class="card ${extra}" style="--rc:${r.color}"><span class="ci">${ico(d)}</span><span class="cn">${d.name.replace(/^(Permission|Voucher|Title|Skin): /, "")}</span></div>`;
+    return `<div class="card ${extra}" style="--rc:${r.color}"><span class="ci">${ico(d, 26)}</span><span class="cn">${d.name.replace(/^(Permission|Voucher|Title|Skin): /, "")}</span></div>`;
   }
   function filler(tier) {
     const odds = tierCfg(tier).odds, rs = L().config.rarities;
@@ -183,7 +183,8 @@
   }
 
   // an icon in its own colour: a shoe's tint (skills.json) recolours the shared emoji
-  const ico = (d) => d.tint ? `<span class="tint" style="--tint:${d.tint}">${d.icon}</span>` : d.icon;
+  const ico = (d, h = 20) => d.kind === "pet" && window.Pets && Pets.has(d.id) ? Pets.icon(d.id, h)
+    : d.tint ? `<span class="tint" style="--tint:${d.tint}">${d.icon}</span>` : d.icon;
 
   function reveal(win, got, r, el) {
     el.classList.add("winner", "r-" + win.rarity);
@@ -196,7 +197,7 @@
     if (win.kind === "title") what = "Replaces your panel heading. Equip it in your bag.";
     if (win.kind === "voucher" && !win.about) what = "A real-life reward. Claim it in your bag when you take it.";
     res.innerHTML = `<div class="rname r-${win.rarity}" style="color:${r.color}">${r.name}!</div>
-      <div class="big">${ico(win)} ${win.name}</div><div class="what">${what}</div>${sp.html}
+      <div class="big">${ico(win, 40)} ${win.name}</div><div class="what">${what}</div>${sp.html}
       ${got.bonus_gold ? `<div class="bonus">+${fmt(got.bonus_gold)} bonus coins</div>` : ""}
       <div class="btns"><span class="gb" id="collect">Collect</span>${more > 0 ? `<span class="gb alt" id="nextC">Open next (${more})</span>` : ""}</div>`;
     res.classList.add("show");
@@ -270,7 +271,8 @@
       ? `Collect ${need - have} more for ${pct(st.full)} and a glowing panel border`
       : `Collect ${half - have} more for ${pct(st.half)} ${sk} XP`;
     const worn = l.equipped[st.kind];
-    const icons = all.map((d) => {
+    const starters = L().config.drops.filter((d) => d.kind === st.kind && d.starter);  // shown and wearable, not counted
+    const icons = [...starters, ...all].map((d) => {
       const rc = rarity(d.rarity).color;
       if (!l.owned.includes(d.id)) return `<span class="ic miss" style="--rc:${rc}" data-name="??? · ${rarity(d.rarity).name}">❔</span>`;
       const on = worn === d.id, label = `${d.name.replace(/^(Title|Skin): /, "")} · ${rarity(d.rarity).name}`;

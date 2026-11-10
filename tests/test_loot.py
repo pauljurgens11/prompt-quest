@@ -187,6 +187,21 @@ class LootTest(unittest.TestCase):
         self.assertAlmostEqual(loot.perk_multiplier(inv["perks"], "wispr", 400), 1.10)  # full replaces half
         self.assertEqual(inv["equipped"]["aura"], "milk")
 
+    def test_starting_a_collection_over_keeps_past_bonus_and_only_the_starter(self):
+        cfg = json.loads(json.dumps(CFG))
+        milks = [d for d in cfg["loot"]["drops"] if d["kind"] == "milk"]
+        ledger = {"chests": {f"c{i}": {"tier": "wooden", "t": 0} for i in range(4)},
+                  "opened_contents": {f"c{i}": {"drop": milks[i], "bonus_gold": 0} for i in range(4)}}
+        acts = [{"action": "open", "chest": f"c{i}", "t": 100 * (i + 1)} for i in range(4)]
+        acts += [{"action": "equip", "slot": "aura", "id": "milk"},
+                 {"action": "start_over", "kind": "milk", "keep": milks[0]["id"], "t": 1000}]
+        inv = loot.inventory(cfg, ledger, acts, now=0)
+        self.assertAlmostEqual(loot.perk_multiplier(inv["perks"], "wispr", 999), 1.10)  # XP before the reset keeps it
+        self.assertEqual(loot.perk_multiplier(inv["perks"], "wispr", 1000), 1)
+        self.assertEqual(([o for o in inv["owned"] if o.startswith("milk")], inv["equipped"]["milk"], inv["equipped"]["aura"]),
+                         ([milks[0]["id"]], milks[0]["id"], None))
+        self.assertEqual(inv["sets"]["milk"]["have"], 1)
+
 
 class StreakTest(unittest.TestCase):
     # Mon 2 Nov 2026 .. Sun 15 Nov 2026

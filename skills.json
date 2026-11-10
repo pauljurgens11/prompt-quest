@@ -215,6 +215,16 @@
     },
     "drops": [
       {
+        "id": "pebble",
+        "name": "Pebble",
+        "icon": "🪨",
+        "rarity": "common",
+        "kind": "pet",
+        "weight": 10,
+        "about": "A rock with eyes. Everyone starts here.",
+      "starter": true
+      },
+      {
         "id": "potion",
         "name": "XP Potion",
         "icon": "🧪",

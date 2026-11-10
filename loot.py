@@ -159,7 +159,8 @@ SLOTS = ("pet", "title", "milk", "watch", "shoes", "hat", "skin", "aura")  # wha
 
 
 def set_members(cfg, st):
-    return [d["id"] for d in cfg["loot"]["drops"] if d["kind"] == st["kind"]]
+    """The pieces of a set. A starter (the pet everyone begins with) is not one: adding it must not move old bonuses."""
+    return [d["id"] for d in cfg["loot"]["drops"] if d["kind"] == st["kind"] and not d.get("starter")]
 
 
 def set_stage(st, have, need):
@@ -169,10 +170,12 @@ def set_stage(st, have, need):
 
 
 def perk_multiplier(perks, skill, ts):
-    """XP multiplier from completed sets: the best stage of each set, added up."""
+    """XP multiplier from completed sets: the best stage of each set, added up.
+    A perk is [since, target, bonus, set id] plus an end time once its set was started over."""
     best = {}
-    for since, target, bonus, sid in perks:
-        if since <= ts and target in (skill, "all"):
+    for p in perks:
+        since, target, bonus, sid = p[:4]
+        if since <= ts < (p[4] if len(p) > 4 else float("inf")) and target in (skill, "all"):
             best[sid] = max(best.get(sid, 0), bonus)
     return 1 + sum(best.values())
 
@@ -192,6 +195,25 @@ def _collect(cfg, inv, drop_id, t):
             inv["perks"].append([t, st["skill"], bonus, st["id"]])
         if stage == 2 and st["id"] not in inv["auras"]:
             inv["auras"].append(st["id"])
+
+
+def _start_over(cfg, inv, kind, keep, t):
+    """Start a collection over with one piece. Its set bonus and glow end now; XP already earned keeps them."""
+    kinds = {d["id"]: d["kind"] for d in cfg["loot"]["drops"]}
+    inv["owned"] = [o for o in inv["owned"] if kinds.get(o) != kind]
+    for st in cfg["loot"].get("sets", []):
+        if st["kind"] != kind:
+            continue
+        for p in inv["perks"]:
+            if p[3] == st["id"] and len(p) == 4:
+                p.append(t)
+        inv["sets"][st["id"]].update(have=0, stage=0)
+        if st["id"] in inv["auras"]:
+            inv["auras"].remove(st["id"])
+        if inv["equipped"]["aura"] == st["id"]:
+            inv["equipped"]["aura"] = None
+    _collect(cfg, inv, keep, t)
+    inv["equipped"][kind] = keep
 
 
 def shop(cfg):
@@ -245,6 +267,8 @@ def inventory(cfg, ledger, actions, now, earned_coins=0):
         elif kind == "claim" and inv["vouchers"].get(a.get("voucher"), 0) > 0:
             inv["vouchers"][a["voucher"]] -= 1
             inv["redeemed"].append({"name": drops[a["voucher"]]["name"], "t": t, "free": True})
+        elif kind == "start_over" and a.get("kind") in SLOTS and drops.get(a.get("keep"), {}).get("kind") == a["kind"]:
+            _start_over(cfg, inv, a["kind"], a["keep"], t)  # e.g. every pet reworked: you keep only the starter
         elif kind == "adjust" and isinstance(a.get("coins"), (int, float)):  # a manual correction
             inv["gold"] = max(0, inv["gold"] + int(a["coins"]))
         elif kind == "redeem" and a.get("reward") in rewards and inv["gold"] >= rewards[a["reward"]]["cost"]:

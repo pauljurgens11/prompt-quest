@@ -218,7 +218,7 @@
 
   /* ---- the lil guy: his room, his body, his moods ---- */
   #buddy { display: none; margin-bottom: 4px; }
-  .room { position: relative; height: 92px; border-radius: 3px; border: 1px solid #000; overflow: hidden;
+  .room { position: relative; height: 140px; border-radius: 3px; border: 1px solid #000; overflow: hidden;
           background: radial-gradient(ellipse at 50% 120%, rgba(var(--accent-rgb),.18), transparent 60%), rgba(var(--ink-rgb),.6);
           box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); touch-action: none; }
   .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; background: linear-gradient(180deg, var(--tile-hi), var(--tile-lo)); border-top: 1px solid #000; }
@@ -235,7 +235,10 @@
   .flexing .gsvg .al { transform: rotate(50deg) translateY(-6px); } .flexing .gsvg .ar { transform: rotate(-50deg) translateY(-6px); }
   /* a pet as the lil guy: the emoji, its dirt, the watch it wears, its milk on the floor */
   .gpet { display: none; position: absolute; left: 0; right: 0; bottom: -5px; font-size: 38px; line-height: 1; text-align: center; }
-  .guy.right .gpet { transform: scaleX(-1); }  /* pet emoji look left; mirrored he looks right */
+  .gface { position: absolute; inset: 0; } .guy.right .gface { scale: -1 1; }  /* pets look left; mirrored, the pet and its hat and watch look right */
+  .gpet svg { display: block; margin: 0 auto; overflow: visible; }
+  .guy.float { animation: hover 2.6s ease-in-out infinite; } @keyframes hover { 50% { translate: 0 -5px; } }
+  .pico { display: inline-block; vertical-align: middle; line-height: 0; } .pico svg { overflow: visible; }
   .guy, .gbody { will-change: transform; }  /* drawn once, then moved as a picture: no re-drawing the emoji */
   .guy.idle .gbody { animation: breathe 2.8s ease-in-out infinite; } @keyframes breathe { 50% { scale: 1.03 .97; } }
   .guy.pet .gpet { display: block; } .guy.pet .gsvg { display: none; }
@@ -243,7 +246,6 @@
   .guy.pet[data-m="open"] .gbody { animation: wiggle .3s ease-in-out infinite; }
   .guy.pet[data-m="flat"] .gpet { rotate: 8deg; translate: 0 2px; }
   @keyframes wiggle { 25% { rotate: -8deg; } 75% { rotate: 8deg; } }
-  .guy.right .gwatch { right: auto; left: 2px; }  /* the watch sits on the side away from his beak */
   .gwatch { position: absolute; right: 2px; bottom: 6px; font-size: 13px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .guy:not(.pet) .gwatch { right: -2px; bottom: 10px; }
   /* his two shoes stand on the floor, outside the body so they never tilt with his waddle.
@@ -252,15 +254,14 @@
   .guy:not(.right) .gfeet { scale: -1 1; }
   .gshoe { position: absolute; bottom: 0; font-size: 14px; line-height: 1; } .gshoe.l { left: 5px; } .gshoe.r { left: 23px; }
   .gshoe i { font-style: normal; display: inline-block; rotate: var(--tilt, 0deg); }
-  .guy.shod .gbody { translate: 0 -7px; }  /* he stands on his shoes, not in them */
+  .guy.shod .gbody { translate: 0 calc(-1 * var(--lift, 7px)); }  /* he stands on his shoes, not in them */
   /* walking: one foot lifts and swings forward (toward the toe), then the other, in time with his waddle */
   .guy.walking .gshoe { animation: step 1.07s ease-in-out infinite; } .guy.walking .gshoe.r { animation-delay: -.535s; }
   @keyframes step { 0%, 50%, 100% { translate: 0 0; rotate: 0deg; } 20% { translate: 3px -4px; rotate: -10deg; } 38% { translate: 4px -1px; rotate: 0deg; } }
   .guy.dangling .gshoe { animation: dangle .35s ease-in-out infinite; } .guy.dangling .gshoe.r { animation-delay: -.17s; }
   @keyframes dangle { 50% { translate: 0 2px; rotate: -12deg; } }
   .ghat { position: absolute; left: 0; right: 0; top: -9px; text-align: center; font-size: 20px; line-height: 1; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
-  .guy.pet .ghat { top: 6px; } .ghat i { font-style: normal; display: inline-block; position: relative; margin-left: -4px; }
-  .guy.right .ghat { scale: -1 1; }
+  .guy.pet .ghat { top: 6px; } .ghat i { font-style: normal; display: inline-block; position: relative; margin-left: -4px; } .guy.pet .ghat i { margin-left: 0; }
   .ghat.fx-extraordinary i::after { content: "✨"; position: absolute; right: -6px; top: -5px; font-size: 9px; animation: twinkle 1.3s ease-in-out infinite; }
   @keyframes twinkle { 0%, 100% { opacity: 0; scale: .4; } 50% { opacity: 1; scale: 1; } }
   .gmilk { position: absolute; left: -12px; bottom: 0; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
@@ -313,6 +314,7 @@
 </div>
 <div class="banner" id="banner"></div>
 <div class="overlay" id="overlay"></div>
+<script src="pets.js"></script>
 <script src="loot.js"></script>
 <script src="buddy.js"></script>
 <script>
@@ -503,7 +505,7 @@
       return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}">${one}${one}</span>`; };
     const hat = (id, cls) => { const d = D(id);
       return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}"><i class="tint" style="--tint:${d.tint || "none"};${d.flip ? "scale:-1 1;" : ""}rotate:${d.tilt || 0}deg">${d.icon}</i></span>`; };
-    if (eq.pet) h += ` <span class="petw"><span class="petb">${D(eq.pet).icon}</span>${eq.watch ? gear(eq.watch, "wrist", "⌚") : ""}${eq.shoes ? feet(eq.shoes, "feet") : ""}${eq.hat ? hat(eq.hat, "hhat") : ""}</span>`;
+    if (eq.pet) h += ` <span class="petw"><span class="petb">${window.Pets && Pets.has(eq.pet) ? Pets.icon(eq.pet, 16) : D(eq.pet).icon}</span>${eq.watch ? gear(eq.watch, "wrist", "⌚") : ""}${eq.shoes ? feet(eq.shoes, "feet") : ""}${eq.hat ? hat(eq.hat, "hhat") : ""}</span>`;
     else { if (eq.hat) h += " " + hat(eq.hat, "hhat solo"); if (eq.watch) h += " " + gear(eq.watch, "wrist solo", "⌚"); if (eq.shoes) h += " " + feet(eq.shoes, "feet solo"); }
     if (eq.milk) h += gear(eq.milk, "milkg", "🥛");
     $("title").innerHTML = h;

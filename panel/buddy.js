@@ -47,14 +47,16 @@
 
   // ---------- state of the scene ----------
   const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0, lastFrame: 0, knock: 0 };
-  const W = () => $("room").clientWidth, GW = 46;
+  const W = () => $("room").clientWidth;
+  const S = 1.5;  // pets are drawn small and shown big: the pet is the centrepiece of the room
+  let GW = 46, GH = 46;  // his size: the blob's, or the equipped pet's
 
   function build() {
     const el = $("buddy");
     el.innerHTML = `<div class="room" id="room">
         <div class="say" id="say"></div>
         <div class="guy" id="guy"><div class="shadow"></div><span class="gmilk" id="gmilk">🥛</span>
-          <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><span class="gwatch" id="gwatch">⌚</span><span class="ghat" id="ghat"><i class="tint"></i></span></div>
+          <div class="gbody" id="gbody">${svg}<div class="gface" id="gface"><span class="gpet" id="gpet"></span><span class="gwatch" id="gwatch">⌚</span><span class="ghat" id="ghat"><i class="tint"></i></span></div></div>
           <span class="gfeet" id="gfeet"><span class="gshoe l"><i class="tint"></i></span><span class="gshoe r"><i class="tint"></i></span></span></div>
         <div class="floor"></div></div>`;
     $("guy").onpointerdown = hold;
@@ -72,7 +74,7 @@
     if (!built || !window.Loot) return;
     const eq = Loot.equipped(), D = (id) => Loot.drop(id);
     G.pet = !!eq.pet;
-    $("gpet").textContent = eq.pet ? D(eq.pet).icon : "";
+    body(eq.pet);
     const wear = (el, id) => {
       el.style.display = id ? "" : "none";
       if (!id) return;
@@ -95,8 +97,33 @@
     paintClass();
   }
 
+  // the pet's drawing at room scale, and its hat, watch and shoes on its own head, wrist and feet
+  function body(id) {
+    const m = id && window.Pets && Pets.has(id) ? Pets.meta(id) : null, guy = $("guy");
+    G.meta = m;
+    GW = m ? Math.round(m.w * S) : 46; GH = m ? Math.round(m.h * S) : 46;
+    guy.style.width = $("gbody").style.width = GW + "px";
+    guy.style.height = $("gbody").style.height = GH + "px";
+    $("gpet").innerHTML = m ? Pets.svg(id, GH) : id ? Loot.drop(id).icon : "";
+    const lift = m ? Math.round(Math.max(9, Math.min(16, GW * 0.22)) * 0.55) : 7, fs = m ? Math.max(9, Math.min(16, GW * 0.22)) : 14;
+    guy.style.setProperty("--lift", lift + "px");
+    guy.style.bottom = 9 + (m ? m.float : 0) + "px";
+    guy.querySelector(".shadow").style.bottom = -3 - (m ? m.float : 0) + "px";
+    const hat = $("ghat"), watch = $("gwatch"), feet = $("gfeet");
+    [hat, watch, feet].forEach((el) => el.removeAttribute("style"));
+    feet.querySelectorAll(".gshoe").forEach((s) => s.removeAttribute("style"));
+    if (!m) return;
+    const [hx, hy, hs] = m.hat, size = hs * S * 1.25;  // the emoji draws the hat in the middle of its box: sink the box onto the head
+    Object.assign(hat.style, { left: hx * S - size / 2 + "px", right: "auto", width: size + "px", top: hy * S - size * 0.42 + "px", fontSize: size + "px" });
+    Object.assign(watch.style, { left: m.wrist[0] * S - 7 + "px", top: m.wrist[1] * S - 8 + "px", right: "auto", bottom: "auto" });
+    // the shoe layer is mirrored whenever the pet is not (the shoe emoji points the other way), so place from the far edge
+    const [fx1, fx2, fy] = m.feet;
+    Object.assign(feet.style, { bottom: Math.round((m.h - fy) * S + lift - fs * 0.75) + "px", height: fs + "px" });
+    feet.querySelectorAll(".gshoe").forEach((s, i) => Object.assign(s.style, { left: GW - [fx1, fx2][i] * S - fs / 2 + "px", fontSize: fs + "px" }));
+  }
+
   function paintClass() {
-    $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.shod ? " shod" : "") + (G.right ? " right" : "");
+    $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.shod ? " shod" : "") + (G.right ? " right" : "") + (G.meta && G.meta.float ? " float" : "");
   }
 
   function mouth(m) {  // a pet shows it with its body instead (lean in, chomp, droop), styled by data-m
@@ -124,7 +151,8 @@
     G.rot += (G.rotTo - G.rot) * Math.min(1, dt * 12);
     const sx = 1 + G.squash * 0.18, sy = 1 - G.squash * 0.2, scale = 1;
     // only on change; .gbody and .guy are their own layers (will-change), so moving them never redraws the emoji
-    set($("guy"), `translate(${G.x.toFixed(1)}px, ${(-G.y).toFixed(1)}px)`);
+    const x = G.meta && G.meta.gait === "stutter" ? Math.round(G.x / 6) * 6 : G.x;  // Glitch moves in jumps, like a dropped frame
+    set($("guy"), `translate(${x.toFixed(1)}px, ${(-G.y).toFixed(1)}px)`);
     set($("gbody"), `rotate(${G.rot.toFixed(1)}deg) scale(${(sx * scale).toFixed(2)}, ${(sy * scale).toFixed(2)})`);
     set($("guy").querySelector(".shadow"), `scale(${(1 - Math.min(0.5, G.y / 80)).toFixed(2)})`);
     $("guy").classList.toggle("idle", Math.abs(G.tx - G.x) <= 1 && G.y === 0 && !G.held && !G.flying && !G.down);
@@ -139,8 +167,9 @@
   function set(el, t) { if (el._t !== t) { el._t = t; el.style.transform = t; } }
   // walk toward the target with a waddle; gravity pulls him down
   function walk(dt, now) {
-    const speed = 26, moving = Math.abs(G.tx - G.x) > 1;
-    if (moving) G.x += Math.sign(G.tx - G.x) * Math.min(Math.abs(G.tx - G.x), speed * dt);
+    const hop = G.meta && G.meta.gait === "hop", speed = hop ? 55 : 26, moving = Math.abs(G.tx - G.x) > 1;
+    if (moving && hop && G.y === 0 && G.vy === 0) G.vy = 150;  // the toad only gets anywhere in big hops
+    if (moving && (!hop || G.y > 0)) G.x += Math.sign(G.tx - G.x) * Math.min(Math.abs(G.tx - G.x), speed * dt);
     G.rotTo = moving ? Math.sin(now / 170) * 3 : 0;  // a waddle while walking, still when standing
     if (G.y > 0 || G.vy > 0) {
       G.vy -= 520 * dt; G.y += G.vy * dt;
@@ -148,7 +177,7 @@
     }
   }
   // thrown: flies, bounces off walls, ceiling and floor; a hard landing knocks him over
-  const ceiling = () => $("room").clientHeight - 9 - GW;
+  const ceiling = () => $("room").clientHeight - 9 - GH - (G.meta ? G.meta.float : 0);
   function fly(dt, room) {
     G.vy -= 700 * dt; G.x += G.vx * dt; G.y += G.vy * dt;
     G.rotTo = Math.max(-40, Math.min(40, G.vx * 0.06));
@@ -187,7 +216,7 @@
     if (now > sayUntil) { el.classList.remove("show"); return; }
     const w = el.offsetWidth, roomW = $("room").clientWidth;
     el.style.left = Math.max(2, Math.min(roomW - w - 2, G.x + GW / 2 - w / 2)) + "px";
-    el.style.bottom = 9 + GW + 2 + G.y + "px";
+    el.style.bottom = 9 + GH + (G.meta ? G.meta.float : 0) + 2 + G.y + "px";
     el.style.setProperty("--tail", Math.max(8, Math.min(w - 8, G.x + GW / 2 - parseFloat(el.style.left))) + "px");
   }
 
@@ -270,7 +299,7 @@
   function place(cx, cy) {
     const r = $("room").getBoundingClientRect(), room = W() - GW;
     G.x = Math.max(0, Math.min(room, cx - r.left - GW / 2));
-    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (cy + GW / 2)));
+    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (G.meta ? G.meta.float : 0) - (cy + GH / 2)));
     G.rotTo = Math.max(-35, Math.min(35, -velocity()[0] * 0.05));  // he dangles behind your hand
   }
   function track(x, y) {
