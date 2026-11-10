@@ -31,7 +31,6 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import buddy  # noqa: E402
 import loot  # noqa: E402
 DEFAULT_DATA = Path.home() / "Library" / "Application Support" / "ClaudeSkills"
 
@@ -504,9 +503,8 @@ def run(paths):
     save_json(paths.state, {**st, "seen": sorted(st["seen"])})
     stats = build_stats(cfg, st)
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
-    stats["buddy"] = buddy.state(cfg, actions, daily_totals(cfg, st), today, time.time(),
-                                 ledger.setdefault("buddy_from", time.time()), day_of)
-    stats["loot"], stats["streak"] = settle_loot(cfg, st, ledger, actions, stats, extra_coins=stats["buddy"]["scooped"])
+    stats["buddy"] = {"show": True}
+    stats["loot"], stats["streak"] = settle_loot(cfg, st, ledger, actions, stats, extra_coins=scooped_coins(actions))
     save_json(paths.loot, ledger)
     save_json(paths.stats, stats)
     return stats
@@ -533,8 +531,13 @@ def end_of_day(day):
     return datetime.fromisoformat(day + "T23:59:59").astimezone().timestamp()
 
 
+def scooped_coins(actions):
+    """A coin per poop you cleaned up, back when the lil guy needed care. Kept so old coins stay."""
+    return len({a.get("poop") for a in actions if a.get("action") == "scoop"})
+
+
 def settle_loot(cfg, st, ledger, actions, stats, now=None, extra_coins=0):
-    """extra_coins: coins earned outside XP (a coin per poop you cleaned up)."""
+    """extra_coins: coins earned outside XP (old poop clean-ups)."""
     now = now or time.time()
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
     loot_day = cfg.get("loot_since", cfg.get("xp_since", "0000"))[:10]

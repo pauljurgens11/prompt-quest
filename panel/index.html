@@ -218,33 +218,15 @@
           background: radial-gradient(ellipse at 50% 120%, rgba(var(--accent-rgb),.18), transparent 60%), rgba(var(--ink-rgb),.6);
           box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); touch-action: none; }
   .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; background: linear-gradient(180deg, var(--tile-hi), var(--tile-lo)); border-top: 1px solid #000; }
-  .bars { position: absolute; left: 4px; top: 4px; width: 62px; display: flex; flex-direction: column; gap: 2px; z-index: 2; }
-  .bbar { display: flex; align-items: center; gap: 2px; font-size: 8px; line-height: 1; }
-  .bbar b { flex: 1; height: 4px; background: var(--ink); border: 1px solid #000; position: relative; }
-  .bbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, var(--xp-a), var(--xp-b)); transition: width .5s; }
-  .bbar.low i { background: linear-gradient(180deg, #ff7a6a, #c22a1a); animation: pulse 1s infinite; }
   /* his plate and his sponge: things lying at the right end of his floor, not buttons */
-  .tools { position: absolute; right: 4px; bottom: 9px; display: flex; align-items: flex-end; gap: 6px; z-index: 2; }
-  .tool { position: relative; width: 24px; height: 26px; display: flex; align-items: flex-end; justify-content: center; cursor: grab; }
-  .tool .ico { position: relative; z-index: 1; font-size: 17px; line-height: 1; margin-bottom: 3px; filter: drop-shadow(1px 2px 0 rgba(0,0,0,.55)); transition: transform .15s; }
-  .tool:hover .ico { transform: translateY(-4px) rotate(-10deg); }
-  .tool.food::before { content: ""; position: absolute; left: -2px; right: -2px; bottom: 0; height: 7px; border-radius: 50%;
-                       background: radial-gradient(ellipse at 50% 35%, #ffffff, #c9d2da 70%, #8e9aa5); border: 1px solid #000; }
-  .tool.sponge::before { content: ""; position: absolute; left: -1px; right: -1px; bottom: 0; height: 6px; border-radius: 3px 3px 7px 7px;
-                         background: linear-gradient(180deg, #9fd8ff, #4f9fd6); border: 1px solid #000; }
-  .tool .sb { position: absolute; z-index: 2; border-radius: 50%; border: 1px solid rgba(255,255,255,.9); background: rgba(200,235,255,.35); pointer-events: none; }
-  .tool .sb.s1 { width: 5px; height: 5px; right: -1px; bottom: 15px; animation: bob 2.2s ease-in-out infinite; }
-  .tool .sb.s2 { width: 3px; height: 3px; right: 4px; bottom: 21px; animation: bob 1.7s ease-in-out infinite reverse; }
-  .tool b { position: absolute; right: -6px; top: -4px; z-index: 2; font-size: 10px; font-weight: normal; color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000; }
-  .tool.food.dis { cursor: not-allowed; } .tool.food.dis .ico { opacity: 0; } .tool.food.dis b { color: #ffb4a0; }
   .guy { position: absolute; left: 0; bottom: 9px; width: 46px; height: 46px; cursor: pointer; z-index: 1; }
   .gbody { width: 46px; height: 46px; transform-origin: 50% 100%; }
   .gsvg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(1px 1px 0 #000); }
   .gsvg .body, .gsvg .foot, .gsvg .arm { fill: var(--accent); stroke: #2a1608; stroke-width: 1.5; }
   .gsvg .foot, .gsvg .arm { fill: var(--accent-lo); }
-  .gsvg .cheek { opacity: 0; transition: opacity .4s; } .happy .gsvg .cheek { opacity: .8; }
+  .gsvg .cheek { opacity: .8; }
   .gsvg .lids rect { fill: var(--accent); transform: scaleY(0); transform-box: fill-box; transform-origin: 50% 0; transition: transform .08s; }
-  .gsvg .lids.blink rect { transform: scaleY(1.3); } .gsvg .lids.sleepy rect { transform: scaleY(.7); }
+  .gsvg .lids.blink rect { transform: scaleY(1.3); }
   .gsvg .arm { transform-box: fill-box; transform-origin: 50% 80%; transition: transform .3s; }
   .flexing .gsvg .al { transform: rotate(50deg) translateY(-6px); } .flexing .gsvg .ar { transform: rotate(-50deg) translateY(-6px); }
   /* a pet as the lil guy: the emoji, its dirt, the watch it wears, its milk on the floor */
@@ -254,14 +236,9 @@
   .guy.idle .gbody { animation: breathe 2.8s ease-in-out infinite; } @keyframes breathe { 50% { scale: 1.03 .97; } }
   .guy.pet .gpet { display: block; } .guy.pet .gsvg { display: none; }
   .guy.pet .gpet { filter: drop-shadow(1px 1px 0 #000); }
-  .guy.pet.weak .gpet { filter: grayscale(.6) brightness(.8) drop-shadow(1px 1px 0 #000); }
-  .guy.pet.strong .gpet { filter: drop-shadow(0 0 6px var(--accent)) drop-shadow(1px 1px 0 #000); }
   .guy.pet[data-m="open"] .gbody { animation: wiggle .3s ease-in-out infinite; }
-  .guy.pet[data-m="chew"] .gbody, .guy.pet[data-m="open"].eating .gbody { animation: chomp .13s ease-in-out infinite; }
-  .guy.pet[data-m="frown"] .gpet, .guy.pet[data-m="flat"] .gpet { rotate: 8deg; translate: 0 2px; }
+  .guy.pet[data-m="flat"] .gpet { rotate: 8deg; translate: 0 2px; }
   @keyframes wiggle { 25% { rotate: -8deg; } 75% { rotate: 8deg; } }
-  @keyframes chomp { 50% { scale: 1.15 .85; } }
-  .pdirt { position: absolute; inset: 6px; pointer-events: none; } .pdirt i { position: absolute; border-radius: 50%; background: #5a3b16; opacity: .85; box-shadow: 0 0 1px #000; }
   .guy.right .gwatch { right: auto; left: 2px; }  /* the watch sits on the side away from his beak */
   .gwatch { position: absolute; right: 2px; bottom: 6px; font-size: 13px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .guy:not(.pet) .gwatch { right: -2px; bottom: 10px; }
@@ -280,28 +257,13 @@
   .gmilk { position: absolute; left: -12px; bottom: 0; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .gmilk.empty { filter: grayscale(1) brightness(.6); opacity: .45; }
   .guy.dangling .gbody { animation: kick .35s ease-in-out infinite; } @keyframes kick { 25% { rotate: -7deg; } 75% { rotate: 7deg; } }
-  .poops { position: absolute; left: 4px; right: 62px; bottom: 9px; height: 18px; z-index: 2; pointer-events: none; }
-  .poop { position: absolute; bottom: 0; font-size: 14px; cursor: pointer; pointer-events: auto; filter: drop-shadow(1px 1px 0 #000); transition: transform .3s, opacity .3s; }
-  .poop:hover { transform: scale(1.25); } .poop.gone { transform: scale(0) rotate(90deg); opacity: 0; }
-  @keyframes stink { 50% { transform: translateY(-3px) rotate(8deg); opacity: .5; } }
-  .stinkl { position: absolute; left: 3px; top: -9px; font-size: 9px; font-style: normal; color: #9bbf5a; animation: stink 1.6s ease-in-out infinite; }
   .shadow { position: absolute; left: 8px; right: 8px; bottom: -3px; height: 5px; border-radius: 50%; background: rgba(0,0,0,.45); }
-  .guy.weak .gsvg { filter: grayscale(.6) brightness(.8) drop-shadow(1px 1px 0 #000); }
-  .guy.strong .gsvg { filter: drop-shadow(0 0 5px var(--accent)) drop-shadow(1px 1px 0 #000); }
-  .guy.shake .gbody { animation: shake .12s 4; } @keyframes shake { 25% { margin-left: -3px; } 75% { margin-left: 3px; } }
-  .fly { display: none; position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #111; box-shadow: 0 0 1px #fff; }
-  .guy.filthy .fly { display: block; } .fly.f1 { left: 4px; top: 4px; animation: fly1 1.3s linear infinite; } .fly.f2 { right: 4px; top: 10px; animation: fly1 1.7s linear infinite reverse; }
-  @keyframes fly1 { 25% { transform: translate(10px, -6px); } 50% { transform: translate(20px, 2px); } 75% { transform: translate(8px, 8px); } }
   .say { position: absolute; left: 0; bottom: 60px; z-index: 3; max-width: 130px; padding: 2px 6px 3px; border-radius: 7px; pointer-events: none;
          font-size: 12px; line-height: 1.05; color: #2a1608; background: #fffbea; border: 1px solid #000; box-shadow: 1px 1px 0 rgba(0,0,0,.5);
          white-space: nowrap; opacity: 0; transform: translateY(4px) scale(.9); transition: opacity .18s, transform .18s; }
-  .say.show { opacity: 1; transform: none; } .say.need { background: #ffe1d6; }
+  .say.show { opacity: 1; transform: none; }
   .say::after { content: ""; position: absolute; left: var(--tail, 50%); bottom: -5px; width: 7px; height: 7px; margin-left: -4px;
                 background: inherit; border-right: 1px solid #000; border-bottom: 1px solid #000; transform: rotate(45deg); }
-  .ghost { position: fixed; left: 0; top: 0; font-size: 20px; pointer-events: none; z-index: 30; filter: drop-shadow(1px 2px 0 rgba(0,0,0,.6)); }
-  .foam { position: fixed; width: var(--s); height: var(--s); border-radius: 50%; pointer-events: none; z-index: 29;
-          background: radial-gradient(circle at 35% 35%, #fff, rgba(220,240,255,.7) 60%, rgba(180,220,255,.3)); animation: foam .9s ease-out both; }
-  @keyframes foam { from { transform: scale(.3); } 60% { opacity: 1; } to { transform: translateY(-8px) scale(1.2); opacity: 0; } }
   .bfx { position: absolute; bottom: 30px; font-size: 12px; pointer-events: none; animation: bfx 1.6s ease-out both; }
   @keyframes bfx { from { opacity: 1; transform: translate(0, 0) scale(.6); } to { opacity: 0; transform: translate(var(--dx), -40px) scale(1.25); } }
 
