@@ -54,7 +54,7 @@
     el.innerHTML = `<div class="room" id="room">
         <div class="say" id="say"></div>
         <div class="guy" id="guy"><div class="shadow"></div><span class="gmilk" id="gmilk">🥛</span>
-          <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><span class="gwatch" id="gwatch">⌚</span></div>
+          <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><span class="gwatch" id="gwatch">⌚</span><span class="ghat" id="ghat"><i class="tint"></i></span></div>
           <span class="gfeet" id="gfeet"><span class="gshoe l"><i class="tint"></i></span><span class="gshoe r"><i class="tint"></i></span></span></div>
         <div class="floor"></div></div>`;
     $("guy").onpointerdown = hold;
@@ -80,6 +80,12 @@
       el.classList.remove("fx-common", "fx-rare", "fx-ultra", "fx-extraordinary"); el.classList.add("fx-" + d.rarity);
     };
     wear($("gwatch"), eq.watch); wear($("gmilk"), eq.milk); wear($("gfeet"), eq.shoes);
+    wear($("ghat"), eq.hat);
+    if (eq.hat) {  // the hat's brim follows his face; flip wears it backwards; tilt cocks it
+      const h = D(eq.hat), i = $("ghat").querySelector("i");
+      i.textContent = h.icon; i.style.setProperty("--tint", h.tint || "none");
+      i.style.rotate = (h.tilt || 0) + "deg"; i.style.scale = h.flip ? "-1 1" : "";
+    }
     G.shod = !!eq.shoes;
     if (eq.shoes) $("gfeet").querySelectorAll(".tint").forEach((t) => {
       const s = D(eq.shoes); t.textContent = s.icon; t.style.setProperty("--tint", s.tint || "none"); t.style.setProperty("--tilt", (s.tilt || 0) + "deg");

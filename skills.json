@@ -683,6 +683,48 @@
         "about": "Grey Dior oblique, 8,500 pairs ever. Your pet will not walk on grass."
       },
       {
+        "id": "hat_snapback",
+        "name": "Backwards Snapback",
+        "icon": "🧢",
+        "rarity": "common",
+        "kind": "hat",
+        "weight": 15,
+        "flip": true,
+        "about": "Brim to the back. Your pet means business now."
+      },
+      {
+        "id": "hat_fitted",
+        "name": "Black Fitted, Sticker On",
+        "icon": "🧢",
+        "rarity": "rare",
+        "kind": "hat",
+        "weight": 12,
+        "tilt": -14,
+        "tint": "grayscale(1) brightness(.35) contrast(1.3)",
+        "about": "Gold sticker still on the brim, cocked to the side. Nobody asks your pet questions."
+      },
+      {
+        "id": "hat_pimp",
+        "name": "Big Pimpin' Top Hat",
+        "icon": "🎩",
+        "rarity": "ultra",
+        "kind": "hat",
+        "weight": 10,
+        "tilt": -12,
+        "about": "Velvet, gold band, a slight lean. Your pet walks slower now, on purpose."
+      },
+      {
+        "id": "hat_crown",
+        "name": "Iced-Out Crown",
+        "icon": "👑",
+        "rarity": "extraordinary",
+        "kind": "hat",
+        "weight": 8,
+        "tilt": -10,
+        "tint": "saturate(1.4) brightness(1.15)",
+        "about": "VVS everything. Your pet no longer answers to anything below king."
+      },
+      {
         "id": "skin_moss",
         "name": "Skin: Mossy Ruins",
         "icon": "🌿",
@@ -1053,6 +1095,16 @@
         "half": 0.05,
         "full": 0.1,
         "aura": "#3fff8a"
+      },
+      {
+        "id": "hats",
+        "name": "Drip Check",
+        "icon": "🧢",
+        "kind": "hat",
+        "skill": "all",
+        "half": 0.03,
+        "full": 0.06,
+        "aura": "#c77dff"
       },
       {
         "id": "wardrobe",

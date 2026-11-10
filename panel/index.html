@@ -166,8 +166,12 @@
   .petw .petb { animation: none; }
   .wrist { position: absolute; right: 0; bottom: 1px; font-size: 10px; filter: drop-shadow(0 0 2px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .wrist.solo { position: static; font-size: 12px; }
-  .feet { position: absolute; left: -3px; bottom: -4px; font-size: 9px; filter: drop-shadow(0 0 2px var(--rc)) drop-shadow(1px 1px 0 #000); }
-  .feet.solo { position: static; font-size: 12px; }
+  .feet { position: absolute; left: 0; bottom: -3px; display: flex; font-size: 7px; line-height: 1; filter: drop-shadow(0 0 2px var(--rc)) drop-shadow(1px 1px 0 #000); }
+  .feet.solo { position: static; display: inline-flex; font-size: 11px; }
+  .feet i { font-style: normal; display: inline-block; }
+  .hhat { position: absolute; left: 0; top: -2px; width: 14px; text-align: center; font-size: 9px; line-height: 1; filter: drop-shadow(0 0 2px var(--rc)) drop-shadow(1px 1px 0 #000); }
+  .hhat.solo { position: static; display: inline-block; width: auto; font-size: 12px; }
+  .hhat i { font-style: normal; display: inline-block; margin-left: -2px; }
   .tint { display: inline-block; filter: var(--tint, none); }  /* a shoe's own colour (skills.json tint); the glow sits on its parent */
   .milkg { display: inline-block; font-size: 14px; margin-left: 4px; vertical-align: 1px; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .fx-ultra { animation: shine 2.2s ease-in-out infinite; }
@@ -254,6 +258,11 @@
   @keyframes step { 0%, 50%, 100% { translate: 0 0; rotate: 0deg; } 20% { translate: 3px -4px; rotate: -10deg; } 38% { translate: 4px -1px; rotate: 0deg; } }
   .guy.dangling .gshoe { animation: dangle .35s ease-in-out infinite; } .guy.dangling .gshoe.r { animation-delay: -.17s; }
   @keyframes dangle { 50% { translate: 0 2px; rotate: -12deg; } }
+  .ghat { position: absolute; left: 0; right: 0; top: -9px; text-align: center; font-size: 20px; line-height: 1; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
+  .guy.pet .ghat { top: 6px; } .ghat i { font-style: normal; display: inline-block; position: relative; margin-left: -4px; }
+  .guy.right .ghat { scale: -1 1; }
+  .ghat.fx-extraordinary i::after { content: "✨"; position: absolute; right: -6px; top: -5px; font-size: 9px; animation: twinkle 1.3s ease-in-out infinite; }
+  @keyframes twinkle { 0%, 100% { opacity: 0; scale: .4; } 50% { opacity: 1; scale: 1; } }
   .gmilk { position: absolute; left: -12px; bottom: 0; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .gmilk.empty { filter: grayscale(1) brightness(.6); opacity: .45; }
   .guy.dangling .gbody { animation: kick .35s ease-in-out infinite; } @keyframes kick { 25% { rotate: -7deg; } 75% { rotate: 7deg; } }
@@ -487,10 +496,15 @@
   }
   function paintHeading() {
     const eq = window.Loot ? Loot.equipped() : {}, D = (id) => Loot.drop(id);
-    const gear = (id, cls, glyph) => { const d = D(id); return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}"><span class="tint" style="--tint:${d.tint || "none"};${glyph ? "" : `rotate:${d.tilt || 0}deg;scale:-1 1`}">${glyph || d.icon}</span></span>`; };
+    const gear = (id, cls, glyph) => { const d = D(id); return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}"><span class="tint" style="--tint:${d.tint || "none"}">${glyph}</span></span>`; };
     let h = eq.title ? D(eq.title).name.replace("Title: ", "") : "Skills";
-    if (eq.pet) h += ` <span class="petw"><span class="petb">${D(eq.pet).icon}</span>${eq.watch ? gear(eq.watch, "wrist", "⌚") : ""}${eq.shoes ? gear(eq.shoes, "feet") : ""}</span>`;
-    else { if (eq.watch) h += " " + gear(eq.watch, "wrist solo", "⌚"); if (eq.shoes) h += " " + gear(eq.shoes, "feet solo"); }
+    // a pair of shoes, toes left like the pet: mirror first, so the tilt that lays the emoji flat turns the other way
+    const feet = (id, cls) => { const d = D(id), one = `<i class="tint" style="--tint:${d.tint || "none"};scale:-1 1;rotate:${-(d.tilt || 0)}deg">${d.icon}</i>`;
+      return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}">${one}${one}</span>`; };
+    const hat = (id, cls) => { const d = D(id);
+      return `<span class="${cls} fx-${d.rarity}" style="--rc:${Loot.rarityColor(d.rarity)}" title="${d.name}"><i class="tint" style="--tint:${d.tint || "none"};${d.flip ? "scale:-1 1;" : ""}rotate:${d.tilt || 0}deg">${d.icon}</i></span>`; };
+    if (eq.pet) h += ` <span class="petw"><span class="petb">${D(eq.pet).icon}</span>${eq.watch ? gear(eq.watch, "wrist", "⌚") : ""}${eq.shoes ? feet(eq.shoes, "feet") : ""}${eq.hat ? hat(eq.hat, "hhat") : ""}</span>`;
+    else { if (eq.hat) h += " " + hat(eq.hat, "hhat solo"); if (eq.watch) h += " " + gear(eq.watch, "wrist solo", "⌚"); if (eq.shoes) h += " " + feet(eq.shoes, "feet solo"); }
     if (eq.milk) h += gear(eq.milk, "milkg", "🥛");
     $("title").innerHTML = h;
     const root = document.documentElement.style, vars = eq.skin ? D(eq.skin).vars || {} : {};

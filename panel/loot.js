@@ -192,7 +192,7 @@
     let what = win.about || "";
     if (win.kind === "gold") what = `+${fmt(win.amount)} coins`;
     if (win.kind === "pet") what = "A new companion next to your panel heading. Equip it in your bag.";
-    if (win.kind === "watch" || win.kind === "milk" || win.kind === "shoes") what = (win.about || "") + " Equip it in your bag.";
+    if (win.kind === "watch" || win.kind === "milk" || win.kind === "shoes" || win.kind === "hat") what = (win.about || "") + " Equip it in your bag.";
     if (win.kind === "title") what = "Replaces your panel heading. Equip it in your bag.";
     if (win.kind === "voucher" && !win.about) what = "A real-life reward. Claim it in your bag when you take it.";
     res.innerHTML = `<div class="rname r-${win.rarity}" style="color:${r.color}">${r.name}!</div>
