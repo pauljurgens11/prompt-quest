@@ -267,6 +267,7 @@
   @keyframes twinkle { 0%, 100% { opacity: 0; scale: .4; } 50% { opacity: 1; scale: 1; } }
   .gmilk { position: absolute; left: 0; bottom: 9px; z-index: 1; line-height: 1; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .gmilk.empty { filter: grayscale(1) brightness(.6); opacity: .45; }
+  .gmilk { will-change: transform; } .gmilk.p3m { filter: none; animation: none; }
   .guy.dangling .gbody { animation: kick .35s ease-in-out infinite; } @keyframes kick { 25% { rotate: -7deg; } 75% { rotate: 7deg; } }
   .shadow { position: absolute; left: 8px; right: 8px; bottom: -3px; height: 5px; border-radius: 50%; background: rgba(0,0,0,.45); }
   .say { position: absolute; left: 0; bottom: 60px; z-index: 3; max-width: 170px; padding: 2px 6px 3px; border-radius: 7px; pointer-events: none;

@@ -7,9 +7,12 @@
   // a leg hanging down from a hip; its foot socket is turned upright again so shoes stand on the ground
   function leg(hip, len, r1, r2, col, foot) {
     const s = sock([0, len, 0], [PI, 0, 0]), w = sock([0, len * 0.5, 0]);
+    const n = node(cyl(r1, r2, len, col, 5), hip, [PI, 0, 0]);
+    s.level = n;  // the shoe stays flat on the floor however the leg swings (see draw)
     const kids = [s, w];
     if (foot) kids.push(node(foot, [0, len, 0]));
-    return { n: node(cyl(r1, r2, len, col, 5), hip, [PI, 0, 0], kids), s, w };
+    n.kids = kids;
+    return { n, s, w };
   }
   const chain = (specs, firstP) => {  // a bendy chain (tails, tentacles): each segment sits on the end of the last
     let tip = null; const segs = [];
@@ -298,11 +301,11 @@
   }
   function glass(milk, extra = []) {
     return node(null, [0, 0, 0], [0, 0, 0], [
-      node(cyl(2.7, 2.9, 0.9, "#cfe6f0@0.7", 12)),  // thick base
-      node(cyl(2.55, 2.95, 6.2, milk, 12), [0, 0.9, 0]),
-      node(cyl(2.95, 2.95, 0.15, milk.replace("!", "") + "!", 12), [0, 7.05, 0]),  // the milk's surface catches the light
-      node(tube(3.05, 3.45, 9.6, "#dff1f8@0.2", 12, 0.92, "#ffffff@0.9")),  // glass walls, see-through
-      node(poly([[-2.2, 1.6, 2.4], [-1.6, 1.6, 2.9], [-1.9, 8.8, 3.25], [-2.5, 8.8, 2.75]], "#ffffff@0.45")),  // a shine streak
+      // frosted glass, solid: overlapping see-through faces left seam lines down the glass
+      node(cyl(2.95, 3.05, 0.9, "#c4dae4", 12)),  // thick base
+      node(cyl(3.05, 3.3, 6.4, milk, 12), [0, 0.9, 0]),  // the milk fills the glass to the brim line
+      node(cyl(3.3, 3.3, 0.12, milk.replace("!", "") + "!", 12), [0, 7.3, 0]),  // the milk's surface catches the light
+      node(tube(3.32, 3.45, 2.3, "#dcecf4", 12, 0.93, "#ffffff"), [0, 7.3, 0]),  // the empty top of the glass and its rim
       ...extra,
     ]);
   }
@@ -405,10 +408,13 @@
     inst.gear = [attach(head, eq.hat, inst.hs), ...feet.map((f) => attach(f, eq.shoes, inst.fs)), attach(wrist, eq.watch, inst.ws)].filter(Boolean);
     inst.st.shod = !!eq.shoes;
   }
+  // a leg swings by turning about z; its foot socket undoes that turn, so the sole stays level
+  const level = (inst) => inst.sockets.feet.forEach((f) => { if (f.level) f.r[2] = f.level.r[2]; });
   // st: { yaw, walk, held, fly, air } from the room's physics
   function draw(inst, ctx, t, st) {
     Object.assign(inst.st, st);
     inst.anim(t, inst.st);
+    level(inst);
     inst.gear.forEach((g) => g.anim && g.anim(t));
     render(ctx, inst.root, inst.W * RES, inst.H * RES, { yaw: st.yaw, cx: inst.cx * RES, cy: inst.H * RES - 1, scale: RES, bands: BANDS });
   }

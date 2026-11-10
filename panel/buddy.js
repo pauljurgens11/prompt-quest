@@ -95,6 +95,7 @@
     if (!eq.milk) { const m = $("gmilk"); m.style.display = ""; m.className = "gmilk empty"; m.title = "No milk yet: find one in a chest"; }
     else $("gmilk").classList.remove("empty");
     if (G.p3) [$("ghat"), $("gwatch"), $("gfeet")].forEach((el) => (el.style.display = "none"));
+    $("gmilk").classList.toggle("p3m", !!G.p3);  // a 3D glass needs no glow filter
     $("gmilk").innerHTML = G.p3 && eq.milk && Pets3D.hasGear(eq.milk) ? Pets3D.gearIcon(eq.milk, Math.round(Math.max(16, Math.min(28, GH * 0.2)))) : "🥛";
     paintClass();
   }
@@ -130,7 +131,8 @@
       const [x0, x1] = G.p3 ? (G.right ? G.p3.ext.r : G.p3.ext.l) : [-GW / 2, GW / 2];
       left = G.right || !G.p3 ? centre + x1 * (G.p3 ? G.ds : 1) + 3 : centre + x0 * G.ds - mw - 3;
     }
-    m.style.left = Math.max(2, Math.min(roomW - mw - 2, left)) + "px";
+    const x = Math.round(Math.max(2, Math.min(roomW - mw - 2, left)));
+    if (m._x !== x) { m._x = x; m.style.transform = `translateX(${x}px)`; }  // moved as a layer, only when it changes: no repaint trail
   }
 
   function paintClass() {
