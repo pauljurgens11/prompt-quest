@@ -85,7 +85,7 @@
   const LIGHT = (() => { const l = [-0.45, 0.75, 0.55], n = Math.hypot(...l); return l.map((x) => x / n); })();
   // Draw a model. yaw turns it (0 = side view facing left); the ground is the bottom of the canvas.
   // Returns the drawn bounds, so callers can size a canvas to fit.
-  function render(ctx, root, W, H, { yaw = 0, tilt = 0.3, scale = 1, cx = W / 2, cy = H - 1, bands = 7, clear = true, measureOnly = false } = {}) {
+  function render(ctx, root, W, H, { yaw = 0, tilt = 0.3, scale = 1, cx = W / 2, cy = H - 1, bands = 7, clear = true, measureOnly = false, maxY = Infinity } = {}) {
     if (clear && !measureOnly) ctx.clearRect(0, 0, W, H);
     const cyw = Math.cos(yaw), syw = Math.sin(yaw), ct = Math.cos(tilt), st = Math.sin(tilt);
     const view = mul([1, 0, 0, 0, ct, -st, 0, st, ct, 0, 0, 0], [cyw, 0, syw, 0, 1, 0, -syw, 0, cyw, 0, 0, 0]);
@@ -97,7 +97,10 @@
         for (const [idx, color] of n.mesh.f) {
           if (idx.length < 3) continue;
           const vp = idx.map((i) => vps[i]);
-          for (const p of vp) { const x = cx + p[0], y = cy - p[1]; if (x < bb[0]) bb[0] = x; if (y < bb[1]) bb[1] = y; if (x > bb[2]) bb[2] = x; if (y > bb[3]) bb[3] = y; }
+          idx.forEach((i, k) => {  // maxY: only measure what is below that height (a pet's feet, not its tail)
+            if (vs[i][1] > maxY) return;
+            const x = cx + vp[k][0], y = cy - vp[k][1]; if (x < bb[0]) bb[0] = x; if (y < bb[1]) bb[1] = y; if (x > bb[2]) bb[2] = x; if (y > bb[3]) bb[3] = y;
+          });
           if (measureOnly) continue;
           let k = 1.12;
           if (color[color.length - 1] !== "!") {

@@ -48,7 +48,8 @@
   // ---------- state of the scene ----------
   const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0, lastFrame: 0, knock: 0 };
   const W = () => $("room").clientWidth;
-  let GW = 46, GH = 46;  // his size: the blob's, or the equipped pet's
+  let GW = 46, GH = 46;
+  const FLOOR = 12;  // the floor strip's top: feet and the glass stand on it, not sunk into it  // his size: the blob's, or the equipped pet's
 
   function build() {
     const el = $("buddy");
@@ -113,7 +114,7 @@
     $("gpet").innerHTML = p3 ? `<canvas width="${p3.W * Pets3D.RES}" height="${p3.H * Pets3D.RES}" style="width:${cw}px;height:${ch}px"></canvas>` : id ? Loot.drop(id).icon : "";
     G.ctx = p3 ? $("gpet").firstChild.getContext("2d") : null;
     guy.style.setProperty("--lift", p3 ? "0px" : "7px");
-    guy.style.bottom = "9px"; guy.querySelector(".shadow").style.bottom = "-3px";
+    guy.style.bottom = FLOOR + "px"; guy.querySelector(".shadow").style.bottom = "-3px";
     G.ds = ds;
     [$("ghat"), $("gwatch"), $("gfeet")].forEach((el) => el.removeAttribute("style"));
     $("gfeet").querySelectorAll(".gshoe").forEach((sh) => sh.removeAttribute("style"));
@@ -196,7 +197,7 @@
     }
   }
   // thrown: flies, bounces off walls, ceiling and floor; a hard landing knocks him over
-  const ceiling = () => $("room").clientHeight - 9 - GH * (G.p3 ? 0.55 : 1);  // a 3D pet's canvas has headroom for hats and wings
+  const ceiling = () => $("room").clientHeight - FLOOR - GH * (G.p3 ? 0.55 : 1);  // a 3D pet's canvas has headroom for hats and wings
   function fly(dt, room) {
     G.vy -= 700 * dt; G.x += G.vx * dt; G.y += G.vy * dt;
     G.rotTo = Math.max(-40, Math.min(40, G.vx * 0.06));
@@ -340,7 +341,7 @@
     if (now > sayUntil) { el.classList.remove("show"); return; }
     const w = el.offsetWidth, roomW = $("room").clientWidth;
     el.style.left = Math.max(2, Math.min(roomW - w - 2, G.x + GW / 2 - w / 2)) + "px";
-    el.style.bottom = Math.min($("room").clientHeight - el.offsetHeight - 2, 9 + GH * (G.p3 ? 0.78 : 1) + 2 + G.y) + "px";  // above his head, inside the room
+    el.style.bottom = Math.min($("room").clientHeight - el.offsetHeight - 2, FLOOR + GH * (G.p3 ? 0.78 : 1) + 2 + G.y) + "px";  // above his head, inside the room
     el.style.setProperty("--tail", Math.max(8, Math.min(w - 8, G.x + GW / 2 - parseFloat(el.style.left))) + "px");
   }
 
@@ -423,7 +424,7 @@
   function place(cx, cy) {
     const r = $("room").getBoundingClientRect(), room = W() - GW;
     G.x = Math.max(0, Math.min(room, cx - r.left - GW / 2));
-    G.y = Math.max(0, Math.min(ceiling(), r.bottom - 9 - (cy + GH * (G.p3 ? 0.3 : 0.5))));  // you hold him by the body
+    G.y = Math.max(0, Math.min(ceiling(), r.bottom - FLOOR - (cy + GH * (G.p3 ? 0.3 : 0.5))));  // you hold him by the body
     G.rotTo = Math.max(-35, Math.min(35, -velocity()[0] * 0.05));  // he dangles behind your hand
   }
   function track(x, y) {

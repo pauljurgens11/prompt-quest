@@ -393,7 +393,11 @@
       const bb = render(null, inst.root, 0, 0, { yaw, cx: 0, cy: 0, measureOnly: true });
       x0 = Math.min(x0, bb[0]); x1 = Math.max(x1, bb[2]); top = Math.min(top, bb[1]);
       const e = yaw === 0.5 ? inst.ext.l : yaw === PI - 0.5 ? inst.ext.r : null;
-      if (e) { e[0] = Math.min(e[0], bb[0]); e[1] = Math.max(e[1], bb[2]); }
+      if (e) {  // the glass stands behind his feet, under a tail or wings: measure only what is near the ground
+        let g = render(null, inst.root, 0, 0, { yaw, cx: 0, cy: 0, measureOnly: true, maxY: 7 });
+        if (!(g[2] > g[0])) g = bb;  // nothing low (a floating pet): use all of him
+        e[0] = Math.min(e[0], g[0] - 5 * inst.fs); e[1] = Math.max(e[1], g[2] + 5 * inst.fs);  // room for shoes
+      }
     }
     const span = Math.max(-x0, x1);
     inst.W = Math.ceil(span * 2 + 6); inst.H = Math.ceil(-top + 11 * inst.hs + 3); inst.cx = inst.W / 2;

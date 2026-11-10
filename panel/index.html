@@ -223,7 +223,7 @@
           box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); touch-action: none; }
   .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; background: linear-gradient(180deg, var(--tile-hi), var(--tile-lo)); border-top: 1px solid #000; }
   /* his plate and his sponge: things lying at the right end of his floor, not buttons */
-  .guy { position: absolute; left: 0; bottom: 9px; width: 46px; height: 46px; cursor: pointer; z-index: 1; }
+  .guy { position: absolute; left: 0; bottom: 12px; width: 46px; height: 46px; cursor: pointer; z-index: 1; }
   .gbody { width: 46px; height: 46px; transform-origin: 50% 100%; }
   .gsvg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(1px 1px 0 #000); }
   .gsvg .body, .gsvg .foot, .gsvg .arm { fill: var(--accent); stroke: #2a1608; stroke-width: 1.5; }
@@ -265,7 +265,7 @@
   .guy.pet .ghat { top: 6px; } .ghat i { font-style: normal; display: inline-block; position: relative; margin-left: -4px; } .guy.pet .ghat i { margin-left: 0; }
   .ghat.fx-extraordinary i::after { content: "✨"; position: absolute; right: -6px; top: -5px; font-size: 9px; animation: twinkle 1.3s ease-in-out infinite; }
   @keyframes twinkle { 0%, 100% { opacity: 0; scale: .4; } 50% { opacity: 1; scale: 1; } }
-  .gmilk { position: absolute; left: 0; bottom: 9px; z-index: 1; line-height: 1; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
+  .gmilk { position: absolute; left: 0; bottom: 12px; z-index: 1; line-height: 1; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .gmilk.empty { filter: grayscale(1) brightness(.6); opacity: .45; }
   .gmilk { will-change: transform; } .gmilk.p3m { filter: none; animation: none; }
   .guy.dangling .gbody { animation: kick .35s ease-in-out infinite; } @keyframes kick { 25% { rotate: -7deg; } 75% { rotate: 7deg; } }
