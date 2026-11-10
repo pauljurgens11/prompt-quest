@@ -105,20 +105,22 @@
     guy.style.width = $("gbody").style.width = GW + "px";
     guy.style.height = $("gbody").style.height = GH + "px";
     $("gpet").innerHTML = m ? Pets.svg(id, GH) : id ? Loot.drop(id).icon : "";
-    const lift = m ? Math.round(Math.max(9, Math.min(16, GW * 0.22)) * 0.55) : 7, fs = m ? Math.max(9, Math.min(16, GW * 0.22)) : 14;
+    const fs = m ? Math.max(9, Math.min(16, GW * 0.22)) : 14, lift = m ? Math.round(fs * 0.6) : 7;  // shoe size, and how far he stands up on them
     guy.style.setProperty("--lift", lift + "px");
     guy.style.bottom = 9 + (m ? m.float : 0) + "px";
     guy.querySelector(".shadow").style.bottom = -3 - (m ? m.float : 0) + "px";
+    $("gmilk").style.left = m ? "-18px" : "";  // the glass stands clear of small pets
     const hat = $("ghat"), watch = $("gwatch"), feet = $("gfeet");
     [hat, watch, feet].forEach((el) => el.removeAttribute("style"));
     feet.querySelectorAll(".gshoe").forEach((s) => s.removeAttribute("style"));
     if (!m) return;
     const [hx, hy, hs] = m.hat, size = hs * S * 1.25;  // the emoji draws the hat in the middle of its box: sink the box onto the head
     Object.assign(hat.style, { left: hx * S - size / 2 + "px", right: "auto", width: size + "px", top: hy * S - size * 0.42 + "px", fontSize: size + "px" });
-    Object.assign(watch.style, { left: m.wrist[0] * S - 7 + "px", top: m.wrist[1] * S - 8 + "px", right: "auto", bottom: "auto" });
+    const ws = Math.max(9, Math.min(14, GW * 0.16));  // the watch grows with the pet: a dot on Pebble, a real piece on the dragon
+    Object.assign(watch.style, { left: m.wrist[0] * S - ws / 2 + "px", top: m.wrist[1] * S - ws / 2 + "px", right: "auto", bottom: "auto", fontSize: ws + "px", lineHeight: 1 });
     // the shoe layer is mirrored whenever the pet is not (the shoe emoji points the other way), so place from the far edge
     const [fx1, fx2, fy] = m.feet;
-    Object.assign(feet.style, { bottom: Math.round((m.h - fy) * S + lift - fs * 0.75) + "px", height: fs + "px" });
+    Object.assign(feet.style, { bottom: Math.round((m.h - fy) * S + lift - fs * 0.85) + "px", height: fs + "px" });
     feet.querySelectorAll(".gshoe").forEach((s, i) => Object.assign(s.style, { left: GW - [fx1, fx2][i] * S - fs / 2 + "px", fontSize: fs + "px" }));
   }
 
