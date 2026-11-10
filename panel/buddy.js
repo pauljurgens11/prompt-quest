@@ -109,7 +109,7 @@
     GW = p3 ? Math.round(cw * 0.6) : 46; GH = ch;  // you grab his body; tails and wings may reach past it
     guy.style.width = $("gbody").style.width = GW + "px";
     guy.style.height = $("gbody").style.height = GH + "px";
-    $("gpet").innerHTML = p3 ? `<canvas width="${p3.W}" height="${p3.H}" style="width:${cw}px;height:${ch}px"></canvas>` : id ? Loot.drop(id).icon : "";
+    $("gpet").innerHTML = p3 ? `<canvas width="${p3.W * Pets3D.RES}" height="${p3.H * Pets3D.RES}" style="width:${cw}px;height:${ch}px"></canvas>` : id ? Loot.drop(id).icon : "";
     G.ctx = p3 ? $("gpet").firstChild.getContext("2d") : null;
     guy.style.setProperty("--lift", p3 ? "0px" : "7px");
     guy.style.bottom = "9px"; guy.querySelector(".shadow").style.bottom = "-3px";

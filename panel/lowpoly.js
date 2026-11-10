@@ -1,6 +1,6 @@
 // A tiny flat-shaded low-poly renderer: meshes from primitives, a joint hierarchy, painter's sort and
 // banded lighting, drawn at low resolution and scaled up with hard pixels for the old-MMO look.
-// A colour ending in "!" glows: it ignores the light (eyes, embers, gems).
+// A colour ending in "!" glows: it ignores the light (eyes, embers, gems). "#rrggbb@0.4" is see-through (glass).
 (function () {
   const cache = {};
   const rgb = (h) => cache[h] || (cache[h] = ((n) => [n >> 16, (n >> 8) & 255, n & 255])(parseInt(h.slice(1, 7), 16)));
@@ -35,6 +35,35 @@
     return { v, f: [[0, 1, 2, 3], [4, 7, 6, 5], [0, 4, 5, 1], [3, 2, 6, 7], [0, 3, 7, 4], [1, 5, 6, 2]].map((q) => [q, color]) };
   }
   const poly = (pts, color) => ({ v: pts, f: [[pts.map((_, i) => i), color]] });  // a flat sheet: wings, fins, flames
+  // an outline in the x/z plane pulled up from y0 to top(x, z): soles, shoe uppers, boot shafts
+  function extrude(pts, y0, top, color, topColor) {
+    const n = pts.length, v = [], f = [], T = typeof top === "function" ? top : () => top;
+    for (const [x, z] of pts) v.push([x, y0, z]);
+    for (const [x, z] of pts) v.push([x, T(x, z), z]);
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; f.push([[i, j, n + j, n + i], color]); }
+    f.push([[...Array(n).keys()].reverse(), color]); f.push([[...Array(n).keys()].map((k) => n + k), topColor || color]);
+    return { v, f };
+  }
+  // a hollow ring: glass walls, crown bands, hat bands (open top and bottom)
+  function tube(r1, r2, h, color, seg = 10, inner = 0.85, rimColor) {
+    const v = [], f = [], ri1 = r1 * inner, ri2 = r2 * inner;
+    for (let j = 0; j < seg; j++) { const b = (2 * Math.PI * j) / seg, c = Math.cos(b), s = Math.sin(b); v.push([r1 * c, 0, r1 * s], [r2 * c, h, r2 * s], [ri1 * c, 0, ri1 * s], [ri2 * c, h, ri2 * s]); }
+    for (let j = 0; j < seg; j++) {
+      const a = j * 4, b = ((j + 1) % seg) * 4;
+      f.push([[a, b, b + 1, a + 1], color], [[a + 2, a + 3, b + 3, b + 2], color], [[a + 1, b + 1, b + 3, a + 3], rimColor || color], [[a, a + 2, b + 2, b], color]);
+    }
+    return { v, f };
+  }
+  // a flat ring whose height follows lift(angle, t): hat brims that curl (t = 0 inner edge, 1 outer edge)
+  function brim(rIn, rOut, lift, color, seg = 16, a0 = 0, a1 = 2 * Math.PI) {
+    const v = [], f = [], full = Math.abs(a1 - a0 - 2 * Math.PI) < 1e-6, steps = full ? seg : seg + 1;
+    for (let j = 0; j < steps; j++) {
+      const b = a0 + ((a1 - a0) * j) / seg, c = Math.cos(b), s = Math.sin(b);
+      v.push([rIn * c, lift(b, 0), rIn * s], [rOut * c, lift(b, 1), rOut * s]);
+    }
+    for (let j = 0; j < seg; j++) { const a = j * 2, b = ((j + 1) % steps) * 2; f.push([[a, b, b + 1, a + 1], color]); }
+    return { v, f };
+  }
 
   // ---- nodes: { mesh, p, r (x,y,z radians, applied Ry*Rx*Rz), s, kids }
   const node = (mesh, p = [0, 0, 0], r = [0, 0, 0], kids = [], s = [1, 1, 1]) => ({ mesh, p, r, s, kids });
@@ -91,13 +120,14 @@
     tris.sort((a, b) => a.z - b.z);
     for (const t of tris) {
       const [r, g, b] = rgb(t.color);
-      ctx.fillStyle = ctx.strokeStyle = `rgb(${Math.min(255, r * t.k) | 0},${Math.min(255, g * t.k) | 0},${Math.min(255, b * t.k) | 0})`;
-      ctx.lineWidth = 0.5;
+      const at = t.color.indexOf("@"), a = at > 0 ? parseFloat(t.color.slice(at + 1)) : 1;
+      ctx.fillStyle = ctx.strokeStyle = `rgba(${Math.min(255, r * t.k) | 0},${Math.min(255, g * t.k) | 0},${Math.min(255, b * t.k) | 0},${a})`;
+      ctx.lineWidth = a < 1 ? 0 : 0.5;
       ctx.beginPath();
       t.vp.forEach((p, i) => (i ? ctx.lineTo(cx + p[0], cy - p[1]) : ctx.moveTo(cx + p[0], cy - p[1])));
       ctx.closePath(); ctx.fill(); ctx.stroke();
     }
     return bb;
   }
-  window.LowPoly = { sphere, cyl, box, poly, node, render };
+  window.LowPoly = { sphere, cyl, box, poly, extrude, tube, brim, node, render };
 })();

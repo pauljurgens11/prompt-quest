@@ -238,8 +238,8 @@
   .gface { position: absolute; inset: 0; } .guy.right .gface { scale: -1 1; }  /* pets look left; mirrored, the pet and its hat and watch look right */
   /* a 3D pet turns instead of mirroring; its canvas may be wider than the body you grab */
   .guy.p3.right .gface { scale: 1 1; } .guy.pet.p3 .gpet { bottom: 0; display: flex; justify-content: center; }
-  .gpet canvas { flex: none; display: block; image-rendering: pixelated; pointer-events: none; }
-  .p3img { image-rendering: pixelated; vertical-align: middle; } .gmilk .p3img { display: block; }
+  .gpet canvas { flex: none; display: block; pointer-events: none; }
+  .p3img { vertical-align: middle; } .gmilk .p3img { display: block; }
   .guy, .gbody { will-change: transform; }  /* drawn once, then moved as a picture: no re-drawing the emoji */
   .guy.idle .gbody { animation: breathe 2.8s ease-in-out infinite; } @keyframes breathe { 50% { scale: 1.03 .97; } }
   .guy.pet .gpet { display: block; } .guy.pet .gsvg { display: none; }

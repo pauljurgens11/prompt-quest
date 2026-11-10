@@ -2,7 +2,7 @@
 // Every pet faces -x, stands on y = 0 and has sockets: head (hats), feet (a shoe on every foot), wrist (watch).
 // Gear models hang off those sockets, so they follow every animation and turn with the pet.
 (function () {
-  const { sphere, cyl, box, poly, node, render } = window.LowPoly;
+  const { sphere, cyl, box, poly, extrude, tube, brim, node, render } = window.LowPoly;
   const PI = Math.PI, sock = (p = [0, 0, 0], r = [0, 0, 0]) => node(null, p, r);
   // a leg hanging down from a hip; its foot socket is turned upright again so shoes stand on the ground
   function leg(hip, len, r1, r2, col, foot) {
@@ -252,42 +252,128 @@
   };
 
   // ---------------------------------------------------------------- gear
-  const shoe = (up, sole, accent, boot) => () => node(null, [0, 0, 0], [0, 0, 0], [
-    node(box(10, 1.4, 4.8, sole), [0, 0.7, 0]), node(sphere(5, 3, 2.4, up, 6, 4), [0.8, 2.4, 0]), node(sphere(2.8, 1.9, 2.3, up, 6, 4), [-3.4, 1.8, 0]),
-    node(poly([[-2, 2, 2.45], [3, 3.4, 2.45], [3.8, 2.4, 2.45]], accent)), node(poly([[-2, 2, -2.45], [3, 3.4, -2.45], [3.8, 2.4, -2.45]], accent)),
-    ...(boot ? [node(box(5.2, 5, 4.6, up), [1.4, 4.6, 0]), node(box(5.6, 1.3, 5, accent), [1.4, 7.4, 0])] : []),
-  ]);
+  // high-detail gear: shaped soles and laces, curled brims, a jewelled crown, see-through milk glasses
+  const dome = (r, h, color, seg = 10, rings = 4) => {  // the top half of a sphere: cap crowns
+    const m = sphere(r, h, r, color, seg, rings * 2);
+    const keep = new Set(m.v.map((p, i) => (p[1] >= -0.01 ? i : -1)).filter((i) => i >= 0));
+    m.f = m.f.filter(([idx]) => idx.every((i) => keep.has(i)));
+    return m;
+  };
+  // a shoe outline seen from above: round toe at -x, narrower heel at +x
+  const outline = (L, W, n = 14) => Array.from({ length: n }, (_, i) => {
+    const a = (2 * PI * i) / n, c = Math.cos(a), s = Math.sin(a);
+    const w = W * (c < 0 ? 1 : 0.86);  // heel a little narrower than the forefoot
+    return [(L / 2) * Math.sign(c) * Math.pow(Math.abs(c), 0.7), (w / 2) * Math.sign(s) * Math.pow(Math.abs(s), 0.8)];
+  });
+  const shrink = (pts, k) => pts.map(([x, z]) => [x * k, z * k]);
+
+  function sneaker({ upper, mid = "#f4f2ec", out = "#c8c4bc", accent, lace = "#f8f8f4", tab }) {
+    const sole = outline(11, 4.6);
+    const top = (x) => 3.1 + Math.max(0, x) * 0.32 - Math.max(0, -x - 2.8) * 0.45;  // low toe, rising to the heel collar
+    const stripe = (z) => node(poly([[-2.6, 1.9, z], [-0.6, 2.9, z], [2.8, 3.6, z], [3.9, 2.8, z], [1.2, 2.5, z], [-1.2, 2.0, z]], accent));
+    return node(null, [0, 0, 0], [0, 0, 0], [
+      node(extrude(sole, 0, 0.55, out)),
+      node(extrude(shrink(sole, 0.98), 0.55, 1.5, mid)),
+      node(extrude(shrink(sole, 0.92), 1.5, top, upper)),
+      node(sphere(1.7, 0.5, 1.5, "#1a1616", 6, 3), [3.0, top(3) - 0.1, 0]),  // the opening you put your foot in
+      node(box(1.1, 1.6, 2, upper), [-0.4, 3.9, 0], [0, 0, 0.55]),  // tongue
+      ...[-2.4, -1.5, -0.6, 0.3].map((x, i) => node(box(0.35, 0.3, 2.6, lace), [x, top(x) + 0.12, 0], [0, i % 2 ? 0.35 : -0.35, 0])),
+      stripe(2.08), stripe(-2.08),
+      node(box(0.6, 1.2, 1.2, tab || accent), [4.9, 3.4, 0]),  // heel tab
+    ]);
+  }
+  function boot({ upper = "#c8963c", dark = "#8a5a22", sole = "#4a2e14", lace = "#d8b070" }) {
+    const out = outline(11.4, 4.9);
+    const top = (x) => (x > -1 ? 8.2 : 3.4 - Math.max(0, -x - 3) * 0.3);
+    return node(null, [0, 0, 0], [0, 0, 0], [
+      node(extrude(out, 0, 1.3, sole)),
+      ...[-4, -2, 0, 2, 4].map((x) => node(box(1, 0.5, 5.1, "#2e1c0c"), [x, 0.25, 0])),  // lugs
+      node(extrude(shrink(out, 0.9), 1.3, top, upper, dark)),
+      node(tube(2.5, 2.4, 1.2, dark, 10, 0.78), [1.8, 7.6, 0]),  // padded collar
+      node(box(0.4, 0.4, 4.7, "#3a2410"), [-1, 1.8, 0]),  // stitched welt
+      ...[2.2, 3.6, 5.0, 6.4].map((y) => node(box(0.4, 0.3, 3.2, lace), [-0.9 - (y - 2) * 0.05, y, 0], [0, 0, 0.1])),
+      ...[2.2, 3.6, 5.0, 6.4].flatMap((y) => [1.55, -1.55].map((z) => node(box(0.5, 0.5, 0.5, "#e8c060"), [-0.85, y, z]))),  // eyelets
+      node(poly([[-0.8, 7.8, 0], [-2.6, 9.6, 0.4], [-2.2, 10, -0.2]], lace)),  // a loose lace end
+    ]);
+  }
+  function glass(milk, extra = []) {
+    return node(null, [0, 0, 0], [0, 0, 0], [
+      node(cyl(2.7, 2.9, 0.9, "#cfe6f0@0.7", 12)),  // thick base
+      node(cyl(2.55, 2.95, 6.2, milk, 12), [0, 0.9, 0]),
+      node(cyl(2.95, 2.95, 0.15, milk.replace("!", "") + "!", 12), [0, 7.05, 0]),  // the milk's surface catches the light
+      node(tube(3.05, 3.45, 9.6, "#dff1f8@0.2", 12, 0.92, "#ffffff@0.9")),  // glass walls, see-through
+      node(poly([[-2.2, 1.6, 2.4], [-1.6, 1.6, 2.9], [-1.9, 8.8, 3.25], [-2.5, 8.8, 2.75]], "#ffffff@0.45")),  // a shine streak
+      ...extra,
+    ]);
+  }
+  const straw = (c1, c2) => node(null, [1, 3, 0.6], [0, 0, -0.25], [node(cyl(0.45, 0.45, 9, c1, 6)), node(cyl(0.47, 0.47, 1.4, c2, 6), [0, 3, 0]), node(cyl(0.47, 0.47, 1.4, c2, 6), [0, 6, 0]),
+    node(cyl(0.45, 0.45, 3, c1, 6), [0, 9, 0], [0, 0, 1.2])]);
+
   const watch = (band, face, extra = []) => () => node(null, [0, 0, 0], [0, 0, 0], [
     node(cyl(2.6, 2.6, 1.6, band, 8)), node(box(0.8, 2.8, 2.8, face), [-2.9, 0.8, 0]), ...extra,
   ]);
-  const milk = (c) => () => node(null, [0, 0, 0], [0, 0, 0], [node(cyl(2.9, 3.2, 7, c, 8)), node(cyl(3.2, 3.3, 2.4, "#dcecf4", 8), [0, 7, 0])]);
   const GEAR = {
-    hat_snapback: () => node(null, [0, -1, 0], [0, 0, 0], [node(sphere(5, 4, 5, "#2f6fe0", 7, 4), [0, 1.4, 0]), node(box(5.6, 0.7, 6, "#1f4fb0"), [5, 1.1, 0]), node(sphere(0.8, 0.6, 0.8, "#1f4fb0", 4, 3), [0, 5.3, 0])]),
-    hat_fitted: () => node(null, [0, -1, 0], [0, 0, 0.12], [node(sphere(5, 4.3, 5, "#1c1c24", 7, 4), [0, 1.4, 0]),
-      node(box(6.2, 0.7, 6.4, "#15151c"), [-5.2, 1.1, 0], [0, 0.5, 0], [node(box(1.8, 0.25, 1.8, "#ffd84a!"), [-1, 0.45, 1])])]),
-    hat_pimp: () => node(null, [0, -0.6, 0], [0, 0, 0.18], [node(cyl(7.5, 7.5, 0.8, "#1a1a22", 8)), node(cyl(4.6, 5, 9, "#22222c", 8), [0, 0.8, 0]),
-      node(cyl(5.1, 5.1, 1.6, "#e8b830", 8), [0, 1.2, 0]), node(poly([[3.6, 2.4, 3.4], [6, 10, 4.2], [8, 12.5, 3.8], [5, 4, 3.4]], "#b05cff"))]),
+    hat_snapback: () => node(null, [0, -0.6, 0], [0, 0, 0], [
+      node(dome(5.2, 4.4, "#2f6fe0", 12, 4)),
+      ...[0, 1, 2, 3, 4, 5].map((i) => node(poly([[0, 4.4, 0], [5.2 * Math.cos((i * PI) / 3), 0.05, 5.2 * Math.sin((i * PI) / 3)], [5.3 * Math.cos((i * PI) / 3), 0.15, 5.3 * Math.sin((i * PI) / 3)]], "#1f4fb0"))),  // panel seams
+      node(brim(4.9, 9.6, (a, t) => 0.2 - t * t * 0.9 - Math.abs(Math.sin(a)) * t * 0.6, "#1f4fb0", 10, -0.95, 0.95)),  // brim, worn backwards (+x)
+      node(sphere(0.75, 0.5, 0.75, "#1f4fb0", 6, 3), [0, 4.45, 0]),
+      node(box(0.3, 1.4, 2.8, "#14141a"), [-4.95, 1.2, 0]),  // the snap opening, now at the front
+      node(poly([[-5.05, 2.4, -0.9], [-5.05, 3.4, 0], [-5.05, 2.4, 0.9]], "#ffffff")),
+    ]),
+    hat_fitted: () => node(null, [0, -0.6, 0], [0, 0, 0.12], [
+      node(dome(5.2, 4.6, "#1c1c24", 12, 4)),
+      node(brim(4.9, 10, (a, t) => 0.3 - t * t * 0.5 - Math.abs(Math.sin(a)) * t * 0.9, "#15151c", 10, PI - 0.95, PI + 0.95), [0, 0, 0], [0, 0.45, 0], [
+        node(cyl(1.2, 1.2, 0.12, "#e8c040!", 10), [-7.4, 0.2, 0.9]), node(cyl(0.7, 0.7, 0.14, "#c8ccd4", 10), [-7.4, 0.25, 0.9]),  // the sticker
+      ]),
+      node(sphere(0.75, 0.5, 0.75, "#15151c", 6, 3), [0, 4.65, 0]),
+      node(poly([[-5, 2, -1.2], [-4.8, 3.6, 0], [-5, 2, 1.2], [-5.2, 2.8, 0]], "#ffd84a")),  // gold front logo
+    ]),
+    hat_pimp: () => node(null, [0, -0.5, 0], [0, 0, 0.16], [
+      node(brim(4.5, 8.4, (a, t) => t * t * 2.4 * Math.pow(Math.sin(a), 2), "#16161e", 18)),  // sides curl up
+      node(cyl(4.5, 4.8, 9, "#22222c", 16, "#2c2c38"), [0, 0.2, 0]),
+      node(cyl(4.85, 4.75, 1.8, "#e8b830", 16), [0, 0.6, 0]),  // gold band
+      node(box(1.2, 1.6, 1.8, "#c8981c"), [0.4, 1.5, 4.8]),  // bow knot
+      node(poly([[0.4, 1.5, 5], [2.8, 2.6, 5.4], [2.6, 0.4, 5.3]], "#d8a828")), node(poly([[0.4, 1.5, 5], [-2, 2.6, 5.4], [-1.8, 0.4, 5.3]], "#d8a828")),
+      node(null, [1.2, 2, 4.9], [0, 0, -0.5], [  // a long purple feather
+        ...[0, 1, 2, 3, 4, 5].map((i) => node(poly([[0, i * 2, 0], [1.5 - i * 0.2, i * 2 + 1, 0.2], [0, i * 2 + 2, 0], [-1.5 + i * 0.2, i * 2 + 1, 0.2]], i % 2 ? "#c47aff" : "#9a4ae0"))),
+        node(cyl(0.18, 0.1, 12, "#f0e6ff", 4)),
+      ]),
+    ]),
     hat_crown: () => {
-      const spark = node(box(0.9, 0.9, 0.9, "#ffffff!"), [1.5, 7, 1]);
-      const n = node(null, [0, -0.6, 0], [0, 0, 0.1], [node(cyl(5, 5.3, 2.8, "#e8b830", 8)),
-        ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => node(cyl(1.3, 0, 3.6, "#ffd84a", 4), [4.8 * Math.cos((i * PI) / 4), 2.6, 4.8 * Math.sin((i * PI) / 4)])),
-        ...[0, 1, 2, 3, 4, 5].map((i) => node(sphere(0.9, 0.9, 0.9, ["#ff2a4a!", "#2a7aff!", "#3ad65a!"][i % 3], 4, 3), [5.3 * Math.cos((i * PI) / 3 + 0.3), 1.4, 5.3 * Math.sin((i * PI) / 3 + 0.3)])), spark]);
+      const spark = node(box(0.8, 0.8, 0.8, "#ffffff!"), [0, 9.2, 0]);
+      const n = node(null, [0, -0.6, 0], [0, 0, 0.1], [
+        node(dome(4.6, 4, "#8a1020", 10, 3), [0, 1.2, 0]),  // velvet cap
+        node(tube(5.2, 5.3, 2.6, "#e8b830", 16, 0.9, "#fff0a0")),
+        ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => { const a = (i * PI) / 4, c = Math.cos(a), s = Math.sin(a), tall = i % 2 === 0;
+          return node(null, [5.25 * c, 2.5, 5.25 * s], [0, -a, 0], [node(poly([[0, 0, -1.6], [0, tall ? 4.4 : 2.4, 0], [0, 0, 1.6]], tall ? "#ffd84a" : "#e8b830")),
+            node(sphere(0.65, 0.65, 0.65, "#fffbe8", 5, 3), [0, tall ? 4.8 : 2.8, 0])]); }),  // points, each topped with a pearl
+        ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => { const a = (i * PI) / 4 + PI / 8;
+          return node(sphere(0.75, 0.9, 0.5, ["#ff2a4a!", "#2a7aff!", "#3ad65a!", "#c05aff!"][i % 4], 4, 3), [5.45 * Math.cos(a), 1.3, 5.45 * Math.sin(a)], [0, -a, 0]); }),
+        node(sphere(1, 1, 1, "#e8b830", 6, 4), [0, 5.4, 0]), node(box(0.5, 2.6, 0.5, "#ffd84a"), [0, 7, 0]), node(box(1.8, 0.5, 0.5, "#ffd84a"), [0, 7.4, 0]), spark,  // orb and cross
+      ]);
       n.anim = (t) => (spark.s = t % 1.3 < 0.5 ? [1, 1, 1] : [0, 0, 0]);
       return n;
     },
-    kicks_af1: shoe("#2e2e38", "#43434e", "#14141a"),
-    kicks_timbs: shoe("#c8963c", "#5a3a1c", "#3a2410", true),
-    kicks_grinch: shoe("#7ee02a", "#f0f0e8", "#e8243a"),
-    kicks_dior: shoe("#c4c8d0", "#f4f4f0", "#6a7a8c"),
+    kicks_af1: () => sneaker({ upper: "#2a2a32", mid: "#1e1e24", out: "#141418", accent: "#3e3e4a", lace: "#26262c", tab: "#1a1a20" }),
+    kicks_timbs: () => { const b = boot({}); b.s = [0.8, 0.8, 0.8]; return node(null, [0, 0, 0], [0, 0, 0], [b]); },  // boots run tall: a bit smaller so legs still show
+    kicks_grinch: () => sneaker({ upper: "#7ee02a", mid: "#f0f0e8", out: "#d8d4c8", accent: "#e8243a", lace: "#f8f8f0", tab: "#e8243a" }),
+    kicks_dior: () => sneaker({ upper: "#cfd3da", mid: "#f6f6f2", out: "#9aa2ac", accent: "#7c8ea4", lace: "#ffffff", tab: "#2a3a5a" }),
+    milk_farm: () => glass("#f6f6f2"),
+    milk_goat: () => glass("#efe2bc", [node(poly([[-1, 7.2, 0], [0.4, 9.4, 0.3], [1.2, 7.4, 0]], "#6aa040")), node(poly([[0.2, 7.2, 0.4], [1.8, 9, 0.8], [1.6, 7.2, 0.2]], "#5a9034"))]),  // a sprig of grass
+    milk_unicorn: () => glass("#f2b8f0", [straw("#ffffff", "#ff7ad8"),
+      ...[0, 1, 2].map((i) => node(cyl(2.96, 2.96, 0.5, ["#9ad8ff", "#c8a8ff", "#ff9ad8"][i], 12), [0, 2.4 + i * 1.6, 0]))]),  // rainbow swirl
+    milk_dragon: () => { const fl = [0, 1, 2].map((i) => node(cyl(0.7, 0, 2.6, i % 2 ? "#ff7a1a!" : "#ffd84a!", 4), [(i - 1) * 1.4, 7.2, (i % 2) * 0.8]));
+      const n = glass("#ffb83a!", fl); n.anim = (t) => fl.forEach((f, i) => (f.s[1] = 0.7 + Math.abs(Math.sin(t * 7 + i * 2)) * 0.6)); return n; },
     watch_casio: watch("#1a1a1a", "#7a8a7a", [node(box(0.3, 1.4, 1.8, "#c8d8a8!"), [-3.4, 0.8, 0])]),
     watch_prx: watch("#c8ccd4", "#2a5aa8"),
     watch_sub: watch("#c8ccd4", "#101418", [node(box(0.4, 3.2, 3.2, "#1a5a3a"), [-2.6, 0.8, 0])]),
     watch_rm: watch("#c41a2a", "#f0eef0", [node(box(0.3, 1.8, 0.5, "#e8243a"), [-3.4, 0.8, 0])]),
-    milk_farm: milk("#f6f6f2"), milk_goat: milk("#efe2bc"), milk_unicorn: milk("#f0b8f0"), milk_dragon: milk("#ffb83a!"),
   };
 
   // ---------------------------------------------------------------- API
-  const DS = 2.4;  // one model pixel is 2.4 screen pixels: the chunky retro look
+  const DS = 2.4;  // one model unit is 2.4 screen pixels
+  const RES = 3, BANDS = 12;  // drawn at 3x that resolution so gear detail (laces, pearls, glass) reads sharp
   function make(id) {
     const inst = PETS[id]();
     inst.id = id; inst.st = {}; inst.gear = [];
@@ -324,7 +410,7 @@
     Object.assign(inst.st, st);
     inst.anim(t, inst.st);
     inst.gear.forEach((g) => g.anim && g.anim(t));
-    render(ctx, inst.root, inst.W, inst.H, { yaw: st.yaw, cx: inst.cx, cy: inst.H - 1 });
+    render(ctx, inst.root, inst.W * RES, inst.H * RES, { yaw: st.yaw, cx: inst.cx * RES, cy: inst.H * RES - 1, scale: RES, bands: BANDS });
   }
   const snaps = {};
   function canvasURL(W, H, paint) {
@@ -336,7 +422,7 @@
     if (!snaps[key]) {
       const inst = make(id); if (eq) dress(inst, eq);
       inst.anim(0.3, inst.st);
-      snaps[key] = { url: canvasURL(inst.W, inst.H, (ctx) => render(ctx, inst.root, inst.W, inst.H, { yaw: 0.55, cx: inst.cx, cy: inst.H - 1 })), w: inst.W, h: inst.H };
+      snaps[key] = { url: canvasURL(inst.W * RES, inst.H * RES, (ctx) => render(ctx, inst.root, inst.W * RES, inst.H * RES, { yaw: 0.55, cx: inst.cx * RES, cy: inst.H * RES - 1, scale: RES, bands: BANDS })), w: inst.W, h: inst.H };
     }
     return snaps[key];
   }
@@ -345,13 +431,13 @@
       const yaw = id.startsWith("watch") ? 1.25 : 0.6;  // show a watch by its face
       const g = GEAR[id](), bb = render(null, g, 0, 0, { yaw, tilt: 0.4, cx: 0, cy: 0, measureOnly: true });
       const W = Math.ceil(bb[2] - bb[0] + 2), H = Math.ceil(bb[3] - bb[1] + 2);
-      snaps[id] = { url: canvasURL(W, H, (ctx) => render(ctx, g, W, H, { yaw, tilt: 0.4, cx: -bb[0] + 1, cy: -bb[1] + 1 })), w: W, h: H };
+      snaps[id] = { url: canvasURL(W * RES, H * RES, (ctx) => render(ctx, g, W * RES, H * RES, { yaw, tilt: 0.4, cx: (-bb[0] + 1) * RES, cy: (-bb[1] + 1) * RES, scale: RES, bands: BANDS })), w: W, h: H };
     }
     return snaps[id];
   }
   const img = (s, h) => `<img class="p3img" src="${s.url}" style="height:${h}px;width:${Math.round((s.w * h) / s.h)}px" alt="">`;
   window.Pets3D = {
-    DS, has: (id) => !!PETS[id], hasGear: (id) => !!GEAR[id], make, dress, draw,
+    DS, RES, has: (id) => !!PETS[id], hasGear: (id) => !!GEAR[id], make, dress, draw, gearTable: GEAR,
     icon: (id, h, eq) => img(snapshot(id, eq), h), gearIcon: (id, h) => img(gearShot(id), h),
   };
 })();
