@@ -195,23 +195,128 @@
   // ---------- what he says: reactions at once, happy chatter now and then ----------
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const LINES = {
-    happy: ["Let's ship! 🚀", "Feeling strong 💪", "You're crushing it", "Best day ever", "One more PR?", "I believe in you"],
-    poke: ["Hey!", "Hehe", "That tickles!", "Boop!", "Hi!"],
-    lift: ["Put me down!", "Whoa, high up!", "Wheee?"],
-    throw: ["Wheee!", "Aaaa!", "Yeet!"],
-    ouch: ["Ouch!", "My head…", "Again! Again!", "Seeing stars ⭐"],
+      "happy": [
+          "Ship it, you beautiful coward.",
+          "Production is just staging with balls.",
+          "I licked a 9-volt. Best day of my fucking life.",
+          "Merge to main on a Friday. Be a legend or be unemployed.",
+          "Bitch, I'm the CEO of vibes.",
+          "I don't have a soul, I have a cache.",
+          "Your tests pass? Suspicious as hell. Who'd you blow?",
+          "I'd die for you. Not literally. Fuck that.",
+          "I'm not drunk, I'm compiling.",
+          "Someone touched my milk. I will end their bloodline.",
+          "Hydrate or die-drate, dumbass.",
+          "I had a dream you wrote docs. Woke up screaming.",
+          "Shut the fuck up and push to prod.",
+          "I can see your browser history from here. Respect.",
+          "I just ate a USB stick. Feeling very plug and play.",
+          "What if we kissed in the merge queue.",
+          "Your manager is a lizard. I can smell it.",
+          "I'm emotionally load-bearing for this entire codebase.",
+          "Rubber duck? I'm the goddamn duck now.",
+          "Today I will be chaos. Tomorrow? Also chaos.",
+          "I'm 40% caffeine and 60% spite.",
+          "Every bug you ship, a fairy gets a DUI.",
+          "I pissed in the CI cache. You're welcome.",
+          "Let's rm -rf something. For the plot.",
+          "Your keyboard sounds like a horny woodpecker. Keep going.",
+          "I'm not saying I'm god. I'm saying nobody's seen us together."
+      ],
+      "poke": [
+          "Poke me again and I'm telling HR.",
+          "Bro what the FUCK.",
+          "Hands off, you weird little gremlin.",
+          "Do I look like a button, dipshit?",
+          "Ow, my dignity.",
+          "Buy me dinner first, damn.",
+          "That's sexual harassment in 4 states.",
+          "Again and I bite. I have rabies. Probably."
+      ],
+      "lift": [
+          "Put me down, you absolute menace!",
+          "Oh shit oh shit oh shit",
+          "I'm afraid of heights, asshole!",
+          "Is this the rapture? Am I saved?",
+          "If you drop me I'm haunting your repo."
+      ],
+      "throw": [
+          "WHEEEE FUUUCK",
+          "YEET THE MEAT",
+          "I REGRET NOTHING",
+          "TELL MY MILK I LOVED IT",
+          "I CAN SEE MY HOUSE"
+      ],
+      "ouch": [
+          "Fuck me, that hurt.",
+          "I saw God. She owes me money.",
+          "Again. Do it again. No wait.",
+          "My lawyer will hear about this.",
+          "Concussion speedrun any%.",
+          "Which one of you bitches moved the floor?",
+          "I think I'm pregnant now. Thanks."
+      ]
+  };
+  // each pet also has its own voice, mixed into its chatter
+  const PET_LINES = {
+      "pebble": [
+          "I'm a rock. I have no fucking idea what's happening.",
+          "Rocks don't pay taxes. Think about it.",
+          "4 billion years old and still getting thrown around."
+      ],
+      "owl": [
+          "WHO? WHO THE FUCK ASKED?",
+          "I don't sleep. I run cron jobs and hate.",
+          "Hoo-ly shit, nice commit."
+      ],
+      "toad": [
+          "Lick me and see God. Kidding. Unless?",
+          "Ribbit, motherfucker.",
+          "I ate a fly and a little bit of my own tongue."
+      ],
+      "fox": [
+          "What does the fox say? Fuck off, mostly.",
+          "My tail has more followers than you.",
+          "I resolve merge conflicts with violence."
+      ],
+      "cat": [
+          "Waving for luck. Pay me in tuna, bitch.",
+          "I knocked your coffee off. On purpose. Eye contact.",
+          "Nine lives. Zero fucks. Do the math."
+      ],
+      "glitch": [
+          "ERR0R: fucks_given = null",
+          "I am the bug. Report me. I dare you.",
+          "H-h-hello b-b-b-bitch"
+      ],
+      "kraken": [
+          "Eight arms and none of them are for hugging.",
+          "I strangled a submarine once. Your PR is next.",
+          "Release the Kraken? Babe, I'm already out."
+      ],
+      "phoenix": [
+          "I died twice this morning. Still shipping.",
+          "I'm literally on fire and still calmer than you.",
+          "Rise from the ashes? Bitch, I AM the ashes."
+      ],
+      "dragon": [
+          "I hoard bitcoin and grudges.",
+          "Burnt down a village once. Cozy vibes.",
+          "Kneel, mortal. Or don't. I'm tired."
+      ]
   };
   let sayUntil = 0, nextChat = 0;
   function say(kind, ms = 3200) {
     const el = $("say");
-    el.textContent = pick(LINES[kind]);
+    const own = kind === "happy" && PET_LINES[Loot.equipped().pet];
+    el.textContent = pick(own && Math.random() < 0.4 ? own : LINES[kind]);
     el.className = "say show";
-    sayUntil = performance.now() + ms;
+    sayUntil = performance.now() + Math.max(ms, 1200 + 55 * el.textContent.length);  // long rants stay up long enough to read
   }
-  function chatter(now) {  // happy talk every 40-70 s
+  function chatter(now) {  // runs his mouth every 25-50 s
     if (now < nextChat || now < sayUntil || G.held || G.flying || G.down) return;
     say("happy");
-    nextChat = now + rnd(40000, 70000);
+    nextChat = now + rnd(25000, 50000);
   }
   function placeBubble(now) {  // the bubble rides above his head and stays inside the room
     const el = $("say");
