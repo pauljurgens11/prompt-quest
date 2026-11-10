@@ -237,9 +237,9 @@
   .gpet { display: none; position: absolute; left: 0; right: 0; bottom: -5px; font-size: 38px; line-height: 1; text-align: center; }
   .gface { position: absolute; inset: 0; } .guy.right .gface { scale: -1 1; }  /* pets look left; mirrored, the pet and its hat and watch look right */
   /* a 3D pet turns instead of mirroring; its canvas may be wider than the body you grab */
-  .guy.p3.right .gface { scale: 1 1; } .guy.p3 .gpet { bottom: 0; display: flex; justify-content: center; }
+  .guy.p3.right .gface { scale: 1 1; } .guy.pet.p3 .gpet { bottom: 0; display: flex; justify-content: center; }
   .gpet canvas { flex: none; display: block; image-rendering: pixelated; pointer-events: none; }
-  .p3img { image-rendering: pixelated; vertical-align: middle; }
+  .p3img { image-rendering: pixelated; vertical-align: middle; } .gmilk .p3img { display: block; }
   .guy, .gbody { will-change: transform; }  /* drawn once, then moved as a picture: no re-drawing the emoji */
   .guy.idle .gbody { animation: breathe 2.8s ease-in-out infinite; } @keyframes breathe { 50% { scale: 1.03 .97; } }
   .guy.pet .gpet { display: block; } .guy.pet .gsvg { display: none; }
@@ -265,7 +265,7 @@
   .guy.pet .ghat { top: 6px; } .ghat i { font-style: normal; display: inline-block; position: relative; margin-left: -4px; } .guy.pet .ghat i { margin-left: 0; }
   .ghat.fx-extraordinary i::after { content: "✨"; position: absolute; right: -6px; top: -5px; font-size: 9px; animation: twinkle 1.3s ease-in-out infinite; }
   @keyframes twinkle { 0%, 100% { opacity: 0; scale: .4; } 50% { opacity: 1; scale: 1; } }
-  .gmilk { position: absolute; left: -12px; bottom: 0; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
+  .gmilk { position: absolute; left: 0; bottom: 9px; z-index: 1; line-height: 1; font-size: 15px; pointer-events: none; filter: drop-shadow(0 0 3px var(--rc)) drop-shadow(1px 1px 0 #000); }
   .gmilk.empty { filter: grayscale(1) brightness(.6); opacity: .45; }
   .guy.dangling .gbody { animation: kick .35s ease-in-out infinite; } @keyframes kick { 25% { rotate: -7deg; } 75% { rotate: 7deg; } }
   .shadow { position: absolute; left: 8px; right: 8px; bottom: -3px; height: 5px; border-radius: 50%; background: rgba(0,0,0,.45); }

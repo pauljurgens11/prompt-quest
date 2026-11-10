@@ -54,7 +54,8 @@
     const el = $("buddy");
     el.innerHTML = `<div class="room" id="room">
         <div class="say" id="say"></div>
-        <div class="guy" id="guy"><div class="shadow"></div><span class="gmilk" id="gmilk">🥛</span>
+        <span class="gmilk" id="gmilk">🥛</span>
+        <div class="guy" id="guy"><div class="shadow"></div>
           <div class="gbody" id="gbody">${svg}<div class="gface" id="gface"><span class="gpet" id="gpet"></span><span class="gwatch" id="gwatch">⌚</span><span class="ghat" id="ghat"><i class="tint"></i></span></div></div>
           <span class="gfeet" id="gfeet"><span class="gshoe l"><i class="tint"></i></span><span class="gshoe r"><i class="tint"></i></span></span></div>
         <div class="floor"></div></div>`;
@@ -94,7 +95,7 @@
     if (!eq.milk) { const m = $("gmilk"); m.style.display = ""; m.className = "gmilk empty"; m.title = "No milk yet: find one in a chest"; }
     else $("gmilk").classList.remove("empty");
     if (G.p3) [$("ghat"), $("gwatch"), $("gfeet")].forEach((el) => (el.style.display = "none"));
-    $("gmilk").innerHTML = G.p3 && eq.milk && Pets3D.hasGear(eq.milk) ? Pets3D.gearIcon(eq.milk, 26) : "🥛";
+    $("gmilk").innerHTML = G.p3 && eq.milk && Pets3D.hasGear(eq.milk) ? Pets3D.gearIcon(eq.milk, Math.round(Math.max(16, Math.min(28, GH * 0.2)))) : "🥛";
     paintClass();
   }
 
@@ -112,9 +113,24 @@
     G.ctx = p3 ? $("gpet").firstChild.getContext("2d") : null;
     guy.style.setProperty("--lift", p3 ? "0px" : "7px");
     guy.style.bottom = "9px"; guy.querySelector(".shadow").style.bottom = "-3px";
-    $("gmilk").style.left = p3 ? -Math.round(cw * 0.2) - 18 + "px" : "";
+    G.ds = ds;
     [$("ghat"), $("gwatch"), $("gfeet")].forEach((el) => el.removeAttribute("style"));
     $("gfeet").querySelectorAll(".gshoe").forEach((sh) => sh.removeAttribute("style"));
+  }
+
+  // his milk stands on the floor just behind him, clear of his tail and wings; it stays put while he's in the air
+  function placeMilk() {
+    const m = $("gmilk");
+    if (G.held || G.flying || G.y > 0 || m.style.display === "none") return;
+    const mw = m.offsetWidth || 16, centre = G.x + GW / 2, roomW = $("room").clientWidth;
+    let left;
+    if (G.p3) { const [x0, x1] = G.right ? G.p3.ext.r : G.p3.ext.l; left = G.right ? centre + x0 * G.ds - mw - 3 : centre + x1 * G.ds + 3; }
+    else left = G.x - mw - 2;
+    if (left < 2 || left > roomW - mw - 2) {  // no room behind him: stand it in front instead
+      const [x0, x1] = G.p3 ? (G.right ? G.p3.ext.r : G.p3.ext.l) : [-GW / 2, GW / 2];
+      left = G.right || !G.p3 ? centre + x1 * (G.p3 ? G.ds : 1) + 3 : centre + x0 * G.ds - mw - 3;
+    }
+    m.style.left = Math.max(2, Math.min(roomW - mw - 2, left)) + "px";
   }
 
   function paintClass() {
@@ -158,6 +174,7 @@
       G.yaw = G.yaw === undefined ? want : G.yaw + (want - G.yaw) * Math.min(1, dt * 7);
       Pets3D.draw(G.p3, G.ctx, now / 1000, { yaw: G.yaw, walk: Math.abs(G.tx - G.x) > 1 && G.y === 0 && !G.held && !G.flying, held: G.held, fly: G.flying, air: G.y > 0 });
     }
+    placeMilk();
     if (!nextChat) nextChat = now + rnd(4000, 8000);
     chatter(now); placeBubble(now);
     if (!G.busy && !G.held) mouth(restingMouth());
@@ -452,6 +469,7 @@
   window.Buddy = {
     gear,
     peek: () => ({ ...G }),  // read-only look at his physics, for testing
+    steer: (f) => f(G),  // dev: drive his state directly when checking looks (facing, position)
     render(stats) {
       $("buddy").style.display = stats.buddy ? "block" : "none";
       if (stats.buddy && !built) build();

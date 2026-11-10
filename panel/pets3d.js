@@ -1,5 +1,5 @@
 // The pets and their gear as low-poly 3D models (rendered by lowpoly.js).
-// Every pet faces -x, stands on y = 0 and has sockets: head (hats), footL/footR (shoes), wrist (watch).
+// Every pet faces -x, stands on y = 0 and has sockets: head (hats), feet (a shoe on every foot), wrist (watch).
 // Gear models hang off those sockets, so they follow every animation and turn with the pet.
 (function () {
   const { sphere, cyl, box, poly, node, render } = window.LowPoly;
@@ -34,7 +34,7 @@
       ]);
       const footL = sock([-1.5, 0, 3]), footR = sock([-1.5, 0, -3]), wrist = sock([1, 3.6, 5.4], [PI / 2, 0, 0]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [body, footL, footR, wrist]);
-      return { root, sockets: { head, footL, footR, wrist }, hs: 0.6, fs: 0.5, ws: 0.6, gait: "hop",
+      return { root, sockets: { head, feet: [footL, footR], wrist }, hs: 0.6, fs: 0.62, ws: 0.6, gait: "hop",
         anim(t, st) { body.p[1] = 5 + (st.shod ? 2 : 0); body.r[2] = Math.sin(t * 1.7) * 0.06; body.s[1] = 1 + Math.sin(t * 2.2) * 0.03; } };
     },
 
@@ -51,7 +51,7 @@
       const wrist = sock([0, -3.5, 1.2]); wingL.kids.push(wrist);
       const lL = leg([-1, 3.4, 2.6], 3.4, 1, 0.9, O, box(3, 0.8, 2.2, O)), lR = leg([-1, 3.4, -2.6], 3.4, 1, 0.9, O, box(3, 0.8, 2.2, O));
       const root = node(null, [0, 0, 0], [0, 0, 0], [lL.n, lR.n, node(sphere(7, 8, 6.5, B, 8, 5), [0, 11, 0]), node(sphere(4.4, 6, 3.6, L, 6, 4), [-3.8, 10, 0]), wingL, wingR, head]);
-      return { root, sockets: { head: hs, footL: lL.s, footR: lR.s, wrist }, hs: 0.85, fs: 0.55, ws: 0.9,
+      return { root, sockets: { head: hs, feet: [lL.s, lR.s], wrist }, hs: 0.85, fs: 0.72, ws: 0.9,
         anim(t, st) {
           head.r[1] = 0.85 * Math.max(-1, Math.min(1, Math.sin(t * 0.55) * 2.2));  // the head swivels, owl style
           const blink = t % 4 < 0.12; eyes.forEach((e) => (e.s[1] = blink ? 0.1 : 1));
@@ -66,14 +66,15 @@
       const eye = (z) => node(sphere(4.4, 4.4, 4.4, G, 6, 4), [-7, 17, z], [0, 0, 0], [node(sphere(3.4, 3.2, 3.2, E, 6, 4), [-2.4, 1, 0], [0, 0, 0], [node(box(1.2, 1.4, 3.6, "#140c00"), [-3, 0.3, 0])])]);
       const eyes = [eye(5.5), eye(-5.5)];
       const back = (z) => node(sphere(7, 4.5, 4.5, D, 6, 4), [8, 5, z], [0, z * 0.05, 0.3]);
-      const fL = leg([-8, 7, 8], 7, 2, 1.6, G, box(4.4, 1.4, 4, D)), fR = leg([-8, 7, -8], 7, 2, 1.6, G, box(4.4, 1.4, 4, D));
+      const fL = leg([-11, 7, 11], 7, 2, 1.6, G, box(4.4, 1.4, 4, D)), fR = leg([-11, 7, -11], 7, 2, 1.6, G, box(4.4, 1.4, 4, D));  // splayed, so shoes show past the belly
       const body = node(sphere(15, 8.5, 12.5, G, 8, 5), [0, 10, 0]), head = sock([-6, 21, 0]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [
         back(-11), fR.n, body, node(sphere(12, 5, 9.5, Y, 8, 4), [-2, 6, 0]),
         ...[[-2, 17, 5], [5, 16, -6], [8, 13, 4], [-5, 16, -4]].map(([x, y, z]) => node(sphere(1.4, 1, 1.4, D, 4, 3), [x, y, z])),
         ...eyes, sac, back(11), fL.n, head,
       ]);
-      return { root, sockets: { head, footL: fL.s, footR: fR.s, wrist: fL.w }, hs: 0.8, fs: 0.65, ws: 1, gait: "hop",
+      const bL = sock([11, 0, 13.5]), bR = sock([11, 0, -13.5]); root.kids.push(bL, bR);
+      return { root, sockets: { head, feet: [fL.s, fR.s, bL, bR], wrist: fL.w }, hs: 0.8, fs: 1, ws: 1, gait: "hop",
         anim(t, st) {
           const k = (t % 3.2) / 3.2, puff = !st.walk && k > 0.6 && k < 0.85 ? Math.sin(((k - 0.6) / 0.25) * PI) : 0;
           sac.s = [0.5 + puff * 0.8, 0.5 + puff * 0.8, 0.5 + puff * 0.8];
@@ -101,7 +102,7 @@
         legs[1].n, legs[3].n, tailRoot, node(sphere(11, 5.8, 5.2, O, 8, 5), [1, 12.5, 0]), node(sphere(8, 3, 4, C, 7, 4), [0, 10, 0]),
         node(sphere(4.6, 5, 4.2, C, 6, 4), [-7, 13, 0]), node(cyl(3.6, 3, 6, O, 6), [-8, 14, 0], [0, 0, 0.8]), head, legs[0].n, legs[2].n,
       ]);
-      return { root, sockets: { head: hs, footL: legs[0].s, footR: legs[3].s, wrist: legs[0].w }, hs: 0.72, fs: 0.5, ws: 0.75,
+      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist: legs[0].w }, hs: 0.72, fs: 0.78, ws: 0.75,
         anim(t, st) {
           tail.forEach((s, i) => { s.r[2] = (i ? 0.28 : 0) + Math.sin(t * 2.4 - i * 0.7) * 0.12; s.r[0] = Math.sin(t * 2.4 - i * 0.5) * 0.25; });
           const sw = st.walk ? Math.sin(t * 11) * 0.5 : 0;
@@ -128,7 +129,7 @@
         node(cyl(6.5, 6.5, 2, "#c41a30", 8), [-9, 20.5, 0], [0, 0, 0.55]), node(cyl(2.6, 2.6, 0.9, G, 7), [-15, 17, 0], [0, 0, PI / 2]),
         node(null, [13, 17, 0], [0, 0, -0.5], [tail[0]]), head, legs[2].n, legs[3].n, paw,
       ]);
-      return { root, sockets: { head: hs, footL: legs[3].s, footR: legs[0].s, wrist }, hs: 0.85, fs: 0.6, ws: 0.95,
+      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist }, hs: 0.85, fs: 0.85, ws: 0.95,
         anim(t, st) {
           tail.forEach((s, i) => { s.r[2] = (i ? -0.32 : 0) + Math.sin(t * 1.6 - i * 0.6) * 0.15; s.r[0] = Math.sin(t * 1.1 - i * 0.5) * 0.1; });
           paw.r[2] = st.walk ? 0.3 : 2.2 + Math.sin(t * 7) * 0.5;  // the lucky wave, paw down while walking
@@ -150,9 +151,9 @@
         node(box(3, 2, 2, M), [-4, 9, 6]), node(box(3, 2, 2, M), [-4, 9, -6]),
       ]);
       const legs = [[-3, 3], [3, -3], [-3, -3], [3, 3]].map(([x, z]) => node(box(2.4, 5, 2.4, M), [x, 2.5, z]));
-      const footL = sock([-3, 0, 3]), footR = sock([3, 0, -3]), wrist = sock([-4, 9, 6.2], [PI / 2, 0, 0]);
-      const root = node(null, [0, 0, 0], [0, 0, 0], [...legs, parts, ...ghosts, hs, footL, footR, wrist]);
-      return { root, sockets: { head: hs, footL, footR, wrist }, hs: 0.85, fs: 0.6, ws: 0.9, gait: "stutter",
+      const feet = [[-3.5, 4.5], [3.5, -4.5], [-3.5, -4.5], [3.5, 4.5]].map(([x, z]) => sock([x, 0, z])), wrist = sock([-4, 9, 6.2], [PI / 2, 0, 0]);
+      const root = node(null, [0, 0, 0], [0, 0, 0], [...legs, parts, ...ghosts, hs, ...feet, wrist]);
+      return { root, sockets: { head: hs, feet, wrist }, hs: 0.85, fs: 0.95, ws: 0.9, gait: "stutter",
         anim(t, st) {
           const k = t % 2.3, g = k > 1.9 && k < 2.05;  // a dropped frame every couple of seconds
           ghosts.forEach((n) => (n.s = g ? [1, 1, 1] : [0, 0, 0]));
@@ -181,7 +182,7 @@
       ]);
       const body = node(null, [0, 6, 0], [0, 0, 0], [...ring.map((r) => r.n), head]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [body]);
-      return { root, sockets: { head: hs, footL: ring[3].end, footR: ring[5].end, wrist: ring[4].mid }, hs: 1.2, fs: 0.55, ws: 1,
+      return { root, sockets: { head: hs, feet: [1, 3, 5, 7].map((i) => ring[i].end), wrist: ring[4].mid }, hs: 1.2, fs: 0.75, ws: 1,
         anim(t) {
           body.p[1] = 8 + Math.sin(t * 1.6) * 2.5;
           tents.forEach((segs, k) => segs.forEach((s, i) => (s.r[2] = (i ? 0.3 : 0) + Math.sin(t * 2.4 - i * 0.7 + k) * 0.22)));
@@ -208,7 +209,7 @@
       const embers = [0, 1, 2, 3, 4].map(() => node(box(0.8, 0.8, 0.8, "#ffd27a!"), [0, 0, 0]));
       const body = node(null, [0, 0, 0], [0, 0, 0], [wR, ...flames, lL.n, lR.n, node(sphere(6, 7.5, 5.5, R, 7, 5), [0, 22, 0]), node(sphere(4, 5.5, 4, O, 6, 4), [-2.8, 21, 0]), head, wL]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [body, ...embers]);
-      return { root, sockets: { head: hs, footL: lL.s, footR: lR.s, wrist: lL.w }, hs: 0.6, fs: 0.42, ws: 0.6,
+      return { root, sockets: { head: hs, feet: [lL.s, lR.s], wrist: lL.w }, hs: 0.6, fs: 0.85, ws: 0.6,
         anim(t, st) {
           body.p[1] = 2 + Math.sin(t * 2) * 1.6;
           const f = Math.sin(t * (st.fly || st.held ? 16 : 7)) * 0.55; wL.r[0] = 1.15 + f; wR.r[0] = -1.15 - f;
@@ -238,7 +239,7 @@
         node(cyl(5.5, 4.4, 15, R), [-9, 21, 0], [0, 0, 0.85]), head,
         ...[-4, 2, 8].map((x, i) => node(cyl(1.8, 0, 4.5 - i * 0.6, H, 4), [x, 29 - i * 1.5, 0], [0, 0, -0.2])), legs[0].n, legs[1].n, wL, puff,
       ]);
-      return { root, sockets: { head: hs, footL: legs[0].s, footR: legs[3].s, wrist: legs[0].w }, hs: 0.95, fs: 0.85, ws: 1.35,
+      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist: legs[0].w }, hs: 0.95, fs: 1.25, ws: 1.35,
         anim(t, st) {
           const f = Math.sin(t * (st.fly || st.held ? 12 : 5)) * 0.6; wL.r[0] = 0.55 + f; wR.r[0] = -0.55 - f;
           tail.forEach((s, i) => (s.r[2] = (i ? 0.25 : 0) + Math.sin(t * 2 - i) * 0.12));
@@ -274,7 +275,7 @@
       n.anim = (t) => (spark.s = t % 1.3 < 0.5 ? [1, 1, 1] : [0, 0, 0]);
       return n;
     },
-    kicks_af1: shoe("#1c1c22", "#26262e", "#0e0e12"),
+    kicks_af1: shoe("#2e2e38", "#43434e", "#14141a"),
     kicks_timbs: shoe("#c8963c", "#5a3a1c", "#3a2410", true),
     kicks_grinch: shoe("#7ee02a", "#f0f0e8", "#e8243a"),
     kicks_dior: shoe("#c4c8d0", "#f4f4f0", "#6a7a8c"),
@@ -294,12 +295,16 @@
     return inst;
   }
   // size the canvas to fit the model through its whole idle cycle, both facings and a hat on top
+  // ext.l / ext.r: how far the pet reaches left and right of its centre when facing left / right (for the milk glass)
   function measure(inst) {
     let x0 = Infinity, x1 = -Infinity, top = 0;
+    inst.ext = { l: [Infinity, -Infinity], r: [Infinity, -Infinity] };
     for (const yaw of [0.5, PI - 0.5, PI / 2, 0]) for (const t of [0, 0.3, 0.7, 1.1, 1.6]) {
       inst.anim(t, {});
       const bb = render(null, inst.root, 0, 0, { yaw, cx: 0, cy: 0, measureOnly: true });
       x0 = Math.min(x0, bb[0]); x1 = Math.max(x1, bb[2]); top = Math.min(top, bb[1]);
+      const e = yaw === 0.5 ? inst.ext.l : yaw === PI - 0.5 ? inst.ext.r : null;
+      if (e) { e[0] = Math.min(e[0], bb[0]); e[1] = Math.max(e[1], bb[2]); }
     }
     const span = Math.max(-x0, x1);
     inst.W = Math.ceil(span * 2 + 6); inst.H = Math.ceil(-top + 11 * inst.hs + 3); inst.cx = inst.W / 2;
@@ -310,8 +315,8 @@
     const g = GEAR[id](); g.s = [scale, scale, scale]; socket.kids.push(g); return g;
   }
   function dress(inst, eq) {
-    const { head, footL, footR, wrist } = inst.sockets;
-    inst.gear = [attach(head, eq.hat, inst.hs), attach(footL, eq.shoes, inst.fs), attach(footR, eq.shoes, inst.fs), attach(wrist, eq.watch, inst.ws)].filter(Boolean);
+    const { head, feet, wrist } = inst.sockets;
+    inst.gear = [attach(head, eq.hat, inst.hs), ...feet.map((f) => attach(f, eq.shoes, inst.fs)), attach(wrist, eq.watch, inst.ws)].filter(Boolean);
     inst.st.shod = !!eq.shoes;
   }
   // st: { yaw, walk, held, fly, air } from the room's physics
