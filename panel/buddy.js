@@ -67,6 +67,7 @@
         <div class="say" id="say"></div>
         <div class="guy" id="guy"><div class="shadow"></div><span class="gmilk" id="gmilk">🥛</span>
           <div class="gbody" id="gbody">${svg}<span class="gpet" id="gpet"></span><div class="pdirt" id="pdirt"></div><span class="gwatch" id="gwatch">⌚</span></div>
+          <span class="gfeet" id="gfeet"><span class="gshoe l"><i class="tint"></i></span><span class="gshoe r"><i class="tint"></i></span></span>
           <span class="fly f1"></span><span class="fly f2"></span></div>
         <div class="poops" id="poops"></div>
         <div class="tools"><span class="tool food" id="tFood" title="Drag to his mouth"><span class="ico">🍖</span><b id="meals"></b></span>
@@ -99,7 +100,11 @@
       const d = D(id); el.title = d.name; el.style.setProperty("--rc", Loot.rarityColor(d.rarity));
       el.classList.remove("fx-common", "fx-rare", "fx-ultra", "fx-extraordinary"); el.classList.add("fx-" + d.rarity);
     };
-    wear($("gwatch"), eq.watch); wear($("gmilk"), eq.milk);
+    wear($("gwatch"), eq.watch); wear($("gmilk"), eq.milk); wear($("gfeet"), eq.shoes);
+    G.shod = !!eq.shoes;
+    if (eq.shoes) $("gfeet").querySelectorAll(".tint").forEach((t) => {
+      const s = D(eq.shoes); t.textContent = s.icon; t.style.setProperty("--tint", s.tint || "none"); t.style.setProperty("--tilt", (s.tilt || 0) + "deg");
+    });
     if (!eq.milk) { const m = $("gmilk"); m.style.display = ""; m.className = "gmilk empty"; m.title = "No milk yet: find one in a chest"; }
     else $("gmilk").classList.remove("empty");
     if (B) paintStats();
@@ -113,7 +118,7 @@
     $("bbars").innerHTML = bar("🍖", B.food, 25) + bar("🫧", B.clean, 30) + bar("💪", B.strength, 35);
     $("meals").textContent = "×" + B.meals_left;
     $("tFood").classList.toggle("dis", !(B.meals_left > 0));
-    $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.right ? " right" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
+    $("guy").className = "guy" + (G.pet ? " pet" : "") + (G.shod ? " shod" : "") + (G.right ? " right" : "") + (weak() ? " weak" : "") + (strong() ? " strong" : "") + (B.clean < 30 ? " filthy" : "") + (mood() >= 70 ? " happy" : "");
     if (!drag) G.cleanShown = B.clean;
     paintDirt();
     paintPoops();
@@ -174,6 +179,7 @@
     set($("gbody"), `rotate(${G.rot.toFixed(1)}deg) scale(${(sx * scale).toFixed(2)}, ${(sy * scale).toFixed(2)})`);
     set($("guy").querySelector(".shadow"), `scale(${(1 - Math.min(0.5, G.y / 80)).toFixed(2)})`);
     $("guy").classList.toggle("idle", Math.abs(G.tx - G.x) <= 1 && G.y === 0 && !G.held && !G.flying && !G.down);
+    $("guy").classList.toggle("walking", Math.abs(G.tx - G.x) > 1 && G.y === 0 && !G.held && !G.flying && !G.down);
     eyes(now);
     if (!nextChat) nextChat = now + rnd(4000, 8000);
     chatter(now); placeBubble(now);

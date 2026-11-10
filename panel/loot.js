@@ -105,7 +105,7 @@
   // ---------- unboxing ----------
   function card(d, extra = "") {
     const r = rarity(d.rarity);
-    return `<div class="card ${extra}" style="--rc:${r.color}"><span class="ci">${d.icon}</span><span class="cn">${d.name.replace(/^(Permission|Voucher|Title|Skin): /, "")}</span></div>`;
+    return `<div class="card ${extra}" style="--rc:${r.color}"><span class="ci">${ico(d)}</span><span class="cn">${d.name.replace(/^(Permission|Voucher|Title|Skin): /, "")}</span></div>`;
   }
   function filler(tier) {
     const odds = tierCfg(tier).odds, rs = L().config.rarities;
@@ -182,6 +182,9 @@
     return { html: html + ` · ${next - have} more for ${pct(s0 === 0 ? st.half : st.full)} ${skillName(st.skill)} XP</div>` };
   }
 
+  // an icon in its own colour: a shoe's tint (skills.json) recolours the shared emoji
+  const ico = (d) => d.tint ? `<span class="tint" style="--tint:${d.tint}">${d.icon}</span>` : d.icon;
+
   function reveal(win, got, r, el) {
     el.classList.add("winner", "r-" + win.rarity);
     SFX.reveal(win.rarity);
@@ -189,11 +192,11 @@
     let what = win.about || "";
     if (win.kind === "gold") what = `+${fmt(win.amount)} coins`;
     if (win.kind === "pet") what = "A new companion next to your panel heading. Equip it in your bag.";
-    if (win.kind === "watch" || win.kind === "milk") what = (win.about || "") + " Equip it in your bag.";
+    if (win.kind === "watch" || win.kind === "milk" || win.kind === "shoes") what = (win.about || "") + " Equip it in your bag.";
     if (win.kind === "title") what = "Replaces your panel heading. Equip it in your bag.";
     if (win.kind === "voucher" && !win.about) what = "A real-life reward. Claim it in your bag when you take it.";
     res.innerHTML = `<div class="rname r-${win.rarity}" style="color:${r.color}">${r.name}!</div>
-      <div class="big">${win.icon} ${win.name}</div><div class="what">${what}</div>${sp.html}
+      <div class="big">${ico(win)} ${win.name}</div><div class="what">${what}</div>${sp.html}
       ${got.bonus_gold ? `<div class="bonus">+${fmt(got.bonus_gold)} bonus coins</div>` : ""}
       <div class="btns"><span class="gb" id="collect">Collect</span>${more > 0 ? `<span class="gb alt" id="nextC">Open next (${more})</span>` : ""}</div>`;
     res.classList.add("show");
@@ -270,7 +273,7 @@
       const on = worn === d.id, label = `${d.name.replace(/^(Title|Skin): /, "")} · ${rarity(d.rarity).name}`;
       if (st.kind === "charm") return `<span class="ic on" style="--rc:${rc}" data-name="${d.name} · chests ${pct(d.chest_speed)} faster">${d.icon}</span>`;
       return `<span class="ic ${on ? "on" : ""}" style="--rc:${rc}" data-name="${label}"
-        data-act='${JSON.stringify({ action: "equip", slot: st.kind, id: on ? null : d.id })}'>${d.icon}</span>`;
+        data-act='${JSON.stringify({ action: "equip", slot: st.kind, id: on ? null : d.id })}'>${ico(d)}</span>`;
     }).join("");
     const glowOn = l.equipped.aura === st.id;
     const glow = stage === 2 ? `<span class="gb sm" data-act='${JSON.stringify({ action: "equip", slot: "aura", id: glowOn ? null : st.id })}'>Glow: ${glowOn ? "on" : "off"}</span>` : "";

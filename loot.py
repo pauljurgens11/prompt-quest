@@ -155,7 +155,7 @@ def contents(cfg, cid, tier_id):
 
 # ---- spending: replay the panel's action log --------------------------------------------
 
-SLOTS = ("pet", "title", "milk", "watch", "skin", "aura")  # what you can equip; aura comes from a full set
+SLOTS = ("pet", "title", "milk", "watch", "shoes", "skin", "aura")  # what you can equip; aura comes from a full set
 
 
 def set_members(cfg, st):

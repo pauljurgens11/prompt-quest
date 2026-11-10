@@ -641,6 +641,48 @@
         "about": "Ultra drip. Your pet refuses to take it off."
       },
       {
+        "id": "kicks_af1",
+        "tilt": -28,
+        "name": "Black Air Force 1s",
+        "icon": "👟",
+        "rarity": "common",
+        "kind": "shoes",
+        "weight": 15,
+        "tint": "grayscale(1) brightness(.35) contrast(1.4)",
+        "about": "All black. Your pet is not to be trusted now."
+      },
+      {
+        "id": "kicks_timbs",
+        "name": "Wheat Timberlands",
+        "icon": "🥾",
+        "rarity": "rare",
+        "kind": "shoes",
+        "weight": 12,
+        "about": "Six-inch, wheat nubuck, laces loose. Built for shipping in any weather."
+      },
+      {
+        "id": "kicks_grinch",
+        "tilt": -28,
+        "name": "Kobe 6 Grinch",
+        "icon": "👟",
+        "rarity": "ultra",
+        "kind": "shoes",
+        "weight": 10,
+        "tint": "sepia(1) saturate(9) hue-rotate(45deg) brightness(1.15)",
+        "about": "Mamba mentality, in Grinch green. Your pet takes every shot."
+      },
+      {
+        "id": "kicks_dior",
+        "tilt": -28,
+        "name": "Air Jordan 1 Dior",
+        "icon": "👟",
+        "rarity": "extraordinary",
+        "kind": "shoes",
+        "weight": 8,
+        "tint": "grayscale(.7) brightness(1.35)",
+        "about": "Grey Dior oblique, 8,500 pairs ever. Your pet will not walk on grass."
+      },
+      {
         "id": "skin_moss",
         "name": "Skin: Mossy Ruins",
         "icon": "🌿",
@@ -1001,6 +1043,16 @@
         "half": 0.05,
         "full": 0.1,
         "aura": "#ffd84a"
+      },
+      {
+        "id": "kicks",
+        "name": "Sneaker Vault",
+        "icon": "👟",
+        "kind": "shoes",
+        "skill": "shipping",
+        "half": 0.05,
+        "full": 0.1,
+        "aura": "#3fff8a"
       },
       {
         "id": "wardrobe",
