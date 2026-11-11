@@ -7,10 +7,11 @@
   // a leg hanging down from a hip; its foot socket is turned upright again so shoes stand on the ground
   function leg(hip, len, r1, r2, col, foot) {
     const s = sock([0, len, 0], [PI, 0, 0]), w = sock([0, len * 0.5, 0]);
-    const n = node(cyl(r1, r2, len, col, 5), hip, [PI, 0, 0]);
+    const n = node(null, hip, [PI, 0, 0]), m = node(cyl(r1, r2, len, col, 5));
     s.level = n;  // the shoe stays flat on the floor however the leg swings (see draw)
-    const kids = [s, w];
-    if (foot) kids.push(node(foot, [0, len, 0]));
+    s.leg = m; s.len = len;  // a shod leg is cut short at the shoe's collar (see dress)
+    const kids = [m, s, w];
+    if (foot) kids.push((s.foot = node(foot, [0, len, 0])));  // his own foot hides inside a shoe
     n.kids = kids;
     return { n, s, w };
   }
@@ -36,8 +37,8 @@
         head,
       ]);
       const footL = sock([-1.5, 0, 3]), footR = sock([-1.5, 0, -3]), wrist = sock([1, 3.6, 5.4], [PI / 2, 0, 0]);
-      const root = node(null, [0, 0, 0], [0, 0, 0], [body, footL, footR, wrist]);
-      return { root, sockets: { head, feet: [footL, footR], wrist }, hs: 0.6, fs: 0.62, ws: 0.6, gait: "hop",
+      const neck = sock([0, 7.2, 0], [0, 0, 0.15]), root = node(null, [0, 0, 0], [0, 0, 0], [body, footL, footR, wrist, neck]);
+      return { root, sockets: { head, feet: [footL, footR], wrist, neck }, ns: [6.5, 5.6], hs: 0.6, fs: 0.62, ws: 0.6, gait: "hop",
         anim(t, st) { body.p[1] = 5 + (st.shod ? 2 : 0); body.r[2] = Math.sin(t * 1.7) * 0.06; body.s[1] = 1 + Math.sin(t * 2.2) * 0.03; } };
     },
 
@@ -50,11 +51,11 @@
         node(cyl(1.7, 0, 4.5, W, 4), [1, 4.2, 3.2], [0.3, 0, -0.35]), node(cyl(1.7, 0, 4.5, W, 4), [1, 4.2, -3.2], [-0.3, 0, -0.35]),
         ...eyes, node(cyl(1.4, 0, 3, O, 4), [-6, -2, 0], [0, 0, PI / 2 + 0.6]), hs,
       ]);
-      const wingL = node(sphere(2.6, 6, 4.6, W, 6, 4), [1, 11, 6.2], [0.15, 0, 0]), wingR = node(sphere(2.6, 6, 4.6, W, 6, 4), [1, 11, -6.2], [-0.15, 0, 0]);
+      const neck = sock([0, 15.6, 0]), wingL = node(sphere(2.6, 6, 4.6, W, 6, 4), [1, 11, 6.2], [0.15, 0, 0]), wingR = node(sphere(2.6, 6, 4.6, W, 6, 4), [1, 11, -6.2], [-0.15, 0, 0]);
       const wrist = sock([0, -3.5, 1.2]); wingL.kids.push(wrist);
       const lL = leg([-1, 3.4, 2.6], 3.4, 1, 0.9, O, box(3, 0.8, 2.2, O)), lR = leg([-1, 3.4, -2.6], 3.4, 1, 0.9, O, box(3, 0.8, 2.2, O));
-      const root = node(null, [0, 0, 0], [0, 0, 0], [lL.n, lR.n, node(sphere(7, 8, 6.5, B, 8, 5), [0, 11, 0]), node(sphere(4.4, 6, 3.6, L, 6, 4), [-3.8, 10, 0]), wingL, wingR, head]);
-      return { root, sockets: { head: hs, feet: [lL.s, lR.s], wrist }, hs: 0.85, fs: 0.72, ws: 0.9,
+      const root = node(null, [0, 0, 0], [0, 0, 0], [lL.n, lR.n, node(sphere(7, 8, 6.5, B, 8, 5), [0, 11, 0]), node(sphere(4.4, 6, 3.6, L, 6, 4), [-3.8, 10, 0]), wingL, wingR, head, neck]);
+      return { root, sockets: { head: hs, feet: [lL.s, lR.s], wrist, neck }, ns: [5.8, 5.4], hs: 0.85, fs: 0.72, ws: 0.9,
         anim(t, st) {
           head.r[1] = 0.85 * Math.max(-1, Math.min(1, Math.sin(t * 0.55) * 2.2));  // the head swivels, owl style
           const blink = t % 4 < 0.12; eyes.forEach((e) => (e.s[1] = blink ? 0.1 : 1));
@@ -70,14 +71,15 @@
       const eyes = [eye(5.5), eye(-5.5)];
       const back = (z) => node(sphere(7, 4.5, 4.5, D, 6, 4), [8, 5, z], [0, z * 0.05, 0.3]);
       const fL = leg([-11, 7, 11], 7, 2, 1.6, G, box(4.4, 1.4, 4, D)), fR = leg([-11, 7, -11], 7, 2, 1.6, G, box(4.4, 1.4, 4, D));  // splayed, so shoes show past the belly
-      const body = node(sphere(15, 8.5, 12.5, G, 8, 5), [0, 10, 0]), head = sock([-6, 21, 0]);
+      const neck = sock([-8.5, -1.2, 0], [0, 0, -1.25]);  // toads have no neck: the band goes round his chest
+      const body = node(sphere(15, 8.5, 12.5, G, 8, 5), [0, 10, 0], [0, 0, 0], [neck]), head = sock([-6, 21, 0]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [
         back(-11), fR.n, body, node(sphere(12, 5, 9.5, Y, 8, 4), [-2, 6, 0]),
         ...[[-2, 17, 5], [5, 16, -6], [8, 13, 4], [-5, 16, -4]].map(([x, y, z]) => node(sphere(1.4, 1, 1.4, D, 4, 3), [x, y, z])),
         ...eyes, sac, back(11), fL.n, head,
       ]);
       const bL = sock([11, 0, 13.5]), bR = sock([11, 0, -13.5]); root.kids.push(bL, bR);
-      return { root, sockets: { head, feet: [fL.s, fR.s, bL, bR], wrist: fL.w }, hs: 0.8, fs: 1, ws: 1, gait: "hop",
+      return { root, sockets: { head, feet: [fL.s, fR.s, bL, bR], wrist: fL.w, neck }, ns: [7.6, 10.6], hs: 0.8, fs: 1, ws: 1, gait: "hop",
         anim(t, st) {
           const k = (t % 3.2) / 3.2, puff = !st.walk && k > 0.6 && k < 0.85 ? Math.sin(((k - 0.6) / 0.25) * PI) : 0;
           sac.s = [0.5 + puff * 0.8, 0.5 + puff * 0.8, 0.5 + puff * 0.8];
@@ -90,7 +92,7 @@
     fox() {
       const O = "#e8782a", C = "#f4ece0", K = "#2a1a12";
       const legs = [[-6, 2.4], [-6, -2.4], [7, 2.4], [7, -2.4]].map(([x, z]) => leg([x, 8.5, z], 8.5, 1.5, 1.2, K, box(2.6, 1, 2, K)));
-      const hs = sock([0.6, 4.4, 0]);
+      const hs = sock([0.6, 4.4, 0]), neck = sock([0, 2.4, 0]);
       const ear = (z) => node(cyl(2, 0, 4.6, O, 4), [0.6, 3.4, z], [z > 0 ? 0.3 : -0.3, 0, -0.15], [node(cyl(1, 0, 1.8, K, 4), [0, 3.2, 0])]);
       const head = node(sphere(5.2, 4.6, 4.8, O, 7, 5), [-11, 18.5, 0], [0, 0, 0], [
         node(cyl(2.8, 1, 6, O, 5), [-3.6, -1.2, 0], [0, 0, PI / 2 + 0.12]), node(sphere(3.2, 2.1, 3.8, C, 6, 4), [-2.4, -2.6, 0]),
@@ -103,9 +105,9 @@
       const tailRoot = node(null, [11, 13.5, 0], [0, 0, -0.95], [tail[0]]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [
         legs[1].n, legs[3].n, tailRoot, node(sphere(11, 5.8, 5.2, O, 8, 5), [1, 12.5, 0]), node(sphere(8, 3, 4, C, 7, 4), [0, 10, 0]),
-        node(sphere(4.6, 5, 4.2, C, 6, 4), [-7, 13, 0]), node(cyl(3.6, 3, 6, O, 6), [-8, 14, 0], [0, 0, 0.8]), head, legs[0].n, legs[2].n,
+        node(sphere(4.6, 5, 4.2, C, 6, 4), [-7, 13, 0]), node(cyl(3.6, 3, 6, O, 6), [-8, 14, 0], [0, 0, 0.8], [neck]), head, legs[0].n, legs[2].n,
       ]);
-      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist: legs[0].w }, hs: 0.72, fs: 0.78, ws: 0.75,
+      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist: legs[0].w, neck }, ns: [3.8, 3.8], hs: 0.72, fs: 0.78, ws: 0.75,
         anim(t, st) {
           tail.forEach((s, i) => { s.r[2] = (i ? 0.28 : 0) + Math.sin(t * 2.4 - i * 0.7) * 0.12; s.r[0] = Math.sin(t * 2.4 - i * 0.5) * 0.25; });
           const sw = st.walk ? Math.sin(t * 11) * 0.5 : 0;
@@ -125,14 +127,14 @@
         ear(4), ear(-4), ...eyes, node(sphere(3.4, 2.6, 3.4, K, 6, 4), [-6, -3, 0]), node(sphere(0.9, 0.7, 1, P, 4, 3), [-9, -2, 0]), hs,
       ]);
       const pawEnd = node(sphere(2.4, 2, 2.4, K, 5, 3), [0, 9, 0], [0, 0, 0], [node(sphere(1.3, 0.8, 1.3, P, 4, 3), [-1.8, 0.2, 0])]);
-      const wrist = sock([0, 6, 0]);
+      const wrist = sock([0, 6, 0]), neck = sock([0, 2.1, 0]);
       const paw = node(cyl(2.2, 1.9, 9, K, 5), [-10, 16, -4.5], [0, 0, 0.4], [pawEnd, wrist]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [
         legs[0].n, legs[1].n, node(sphere(12, 8, 7.5, K, 8, 5), [2, 16, 0]), node(sphere(7, 7.5, 7, K, 7, 5), [-7, 19, 0]),
-        node(cyl(6.5, 6.5, 2, "#c41a30", 8), [-9, 20.5, 0], [0, 0, 0.55]), node(cyl(2.6, 2.6, 0.9, G, 7), [-15, 17, 0], [0, 0, PI / 2]),
+        node(cyl(6.5, 6.5, 2, "#c41a30", 8), [-9, 20.5, 0], [0, 0, 0.55], [neck]), node(cyl(2.6, 2.6, 0.9, G, 7), [-15, 17, 0], [0, 0, PI / 2]),
         node(null, [13, 17, 0], [0, 0, -0.5], [tail[0]]), head, legs[2].n, legs[3].n, paw,
       ]);
-      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist }, hs: 0.85, fs: 0.85, ws: 0.95,
+      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist, neck }, ns: [6.2, 6.2], hs: 0.85, fs: 0.85, ws: 0.95,
         anim(t, st) {
           tail.forEach((s, i) => { s.r[2] = (i ? -0.32 : 0) + Math.sin(t * 1.6 - i * 0.6) * 0.15; s.r[0] = Math.sin(t * 1.1 - i * 0.5) * 0.1; });
           paw.r[2] = st.walk ? 0.3 : 2.2 + Math.sin(t * 7) * 0.5;  // the lucky wave, paw down while walking
@@ -155,8 +157,8 @@
       ]);
       const legs = [[-3, 3], [3, -3], [-3, -3], [3, 3]].map(([x, z]) => node(box(2.4, 5, 2.4, M), [x, 2.5, z]));
       const feet = [[-3.5, 4.5], [3.5, -4.5], [-3.5, -4.5], [3.5, 4.5]].map(([x, z]) => sock([x, 0, z])), wrist = sock([-4, 9, 6.2], [PI / 2, 0, 0]);
-      const root = node(null, [0, 0, 0], [0, 0, 0], [...legs, parts, ...ghosts, hs, ...feet, wrist]);
-      return { root, sockets: { head: hs, feet, wrist }, hs: 0.85, fs: 0.95, ws: 0.9, gait: "stutter",
+      const neck = sock([0, 15, 0]), root = node(null, [0, 0, 0], [0, 0, 0], [...legs, parts, ...ghosts, hs, ...feet, wrist, neck]);
+      return { root, sockets: { head: hs, feet, wrist, neck }, ns: [7.4, 6.3], hs: 0.85, fs: 0.95, ws: 0.9, gait: "stutter",
         anim(t, st) {
           const k = t % 2.3, g = k > 1.9 && k < 2.05;  // a dropped frame every couple of seconds
           ghosts.forEach((n) => (n.s = g ? [1, 1, 1] : [0, 0, 0]));
@@ -177,15 +179,15 @@
         return { n: node(null, [Math.cos(a) * 8, 22, Math.sin(a) * 8], [0, -a, 0], [node(null, [0, 0, 0], [0, 0, PI + 0.85], [segs[0]])]), end, mid };
       };
       const ring = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => tentacle((i / 8) * 2 * PI + 0.2));
-      const hs = sock([0, 13.6, 0]);
+      const hs = sock([0, 13.6, 0]), neck = sock([0, -10.5, 0]);
       const head = node(sphere(13, 14, 13, P, 9, 6), [0, 33, 0], [0, 0, 0.15], [
         node(sphere(4, 4.4, 3, "#f4f0ff", 6, 4), [-11, 1, 4.5]), node(sphere(4, 4.4, 3, "#f4f0ff", 6, 4), [-11, 1, -4.5]),
         node(sphere(2.2, 2.6, 1.6, "#1a0838", 5, 4), [-13.5, 0.6, 4.8]), node(sphere(2.2, 2.6, 1.6, "#1a0838", 5, 4), [-13.5, 0.6, -4.8]),
-        ...[[2, 12, 5], [6, 9, -7], [-4, 11, -2], [9, 5, 6]].map(([x, y, z]) => node(sphere(1.2, 1.2, 1.2, S, 4, 3), [x, y, z])), hs,
+        ...[[2, 12, 5], [6, 9, -7], [-4, 11, -2], [9, 5, 6]].map(([x, y, z]) => node(sphere(1.2, 1.2, 1.2, S, 4, 3), [x, y, z])), hs, neck,
       ]);
       const body = node(null, [0, 6, 0], [0, 0, 0], [...ring.map((r) => r.n), head]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [body]);
-      return { root, sockets: { head: hs, feet: [1, 3, 5, 7].map((i) => ring[i].end), wrist: ring[4].mid }, hs: 1.2, fs: 0.75, ws: 1,
+      return { root, sockets: { head: hs, feet: [1, 3, 5, 7].map((i) => ring[i].end), wrist: ring[4].mid, neck }, ns: [9.6, 9.6], hs: 1.2, fs: 0.75, ws: 1,
         anim(t) {
           body.p[1] = 8 + Math.sin(t * 1.6) * 2.5;
           tents.forEach((segs, k) => segs.forEach((s, i) => (s.r[2] = (i ? 0.3 : 0) + Math.sin(t * 2.4 - i * 0.7 + k) * 0.22)));
@@ -194,7 +196,7 @@
 
     phoenix() {
       const R = "#e8501a", O = "#ff9a2a", Y = "#ffd84a";
-      const hs = sock([-0.4, 4.2, 0]);
+      const hs = sock([-0.4, 4.2, 0]), neck = sock([-1.6, 27.6, 0], [0, 0, 0.35]);
       const crest = [[0.4, 3.4, -0.5, "#ffcf3a!"], [1.6, 3, -0.95, "#ff7a1a!"], [2.6, 2.2, -1.35, "#ffcf3a!"]].map(([x, y, a, c]) => node(cyl(1.2, 0, 5.5, c, 4), [x, y, 0], [0, 0, a]));
       const head = node(sphere(4.4, 4.2, 4.2, R, 7, 5), [-3, 31, 0], [0, 0, 0], [
         node(cyl(1.5, 0, 3.6, Y, 4), [-4, -0.8, 0], [0, 0, PI / 2 + 0.35]),
@@ -210,9 +212,9 @@
       ]));
       const lL = leg([-0.6, 16, 2], 6, 0.6, 0.5, Y, box(2.4, 0.6, 1.6, Y)), lR = leg([-0.6, 16, -2], 6, 0.6, 0.5, Y, box(2.4, 0.6, 1.6, Y));
       const embers = [0, 1, 2, 3, 4].map(() => node(box(0.8, 0.8, 0.8, "#ffd27a!"), [0, 0, 0]));
-      const body = node(null, [0, 0, 0], [0, 0, 0], [wR, ...flames, lL.n, lR.n, node(sphere(6, 7.5, 5.5, R, 7, 5), [0, 22, 0]), node(sphere(4, 5.5, 4, O, 6, 4), [-2.8, 21, 0]), head, wL]);
+      const body = node(null, [0, 0, 0], [0, 0, 0], [wR, ...flames, lL.n, lR.n, node(sphere(6, 7.5, 5.5, R, 7, 5), [0, 22, 0]), node(sphere(4, 5.5, 4, O, 6, 4), [-2.8, 21, 0]), head, neck, wL]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [body, ...embers]);
-      return { root, sockets: { head: hs, feet: [lL.s, lR.s], wrist: lL.w }, hs: 0.6, fs: 0.85, ws: 0.6,
+      return { root, sockets: { head: hs, feet: [lL.s, lR.s], wrist: lL.w, neck }, ns: [3.9, 3.6], hs: 0.6, fs: 0.85, ws: 0.6,
         anim(t, st) {
           body.p[1] = 2 + Math.sin(t * 2) * 1.6;
           const f = Math.sin(t * (st.fly || st.held ? 16 : 7)) * 0.55; wL.r[0] = 1.15 + f; wR.r[0] = -1.15 - f;
@@ -228,8 +230,8 @@
       tail[4].kids.push(node(poly([[0, 0, 0], [-3, 4, 0], [0, 8, 0], [3, 4, 0]], D), [0, 5, 0]));
       const wing = (side) => node(poly([[0, 0, 0], [6, 18, 0], [14, 22, 0], [24, 14, 0], [20, 8, 0], [22, 2, 0], [10, -1, 0]], M), [4, 26, 6 * side], [side * 0.5, 0, 0]);
       const wL = wing(1), wR = wing(-1);
-      const legs = [[-7, 6], [7, 6], [-7, -6], [7, -6]].map(([x, z]) => leg([x, 14, z], 10, 3.2, 2.6, R, box(6, 2.4, 5, D)));
-      const hs = sock([2, 6.2, 0]);
+      const legs = [[-7, 6], [7, 6], [-7, -6], [7, -6]].map(([x, z]) => leg([x, 13, z], 13, 3.2, 2.4, R, box(6, 2.4, 5, D)));
+      const hs = sock([2, 6.2, 0]), neck = sock([0, 8, 0]);
       const eyes = [4.6, -4.6].map((z) => node(sphere(1.6, 1.8, 1.4, "#ffd23a!", 5, 4), [-3.5, 2, z], [0, 0, 0], [node(sphere(0.8, 1.2, 0.8, "#1a0600", 4, 3), [-1.1, 0, z > 0 ? 0.8 : -0.8])]));
       const head = node(sphere(8, 6.5, 6.8, R, 7, 5), [-22, 33, 0], [0, 0, 0.1], [
         node(cyl(4.6, 2.6, 10, R, 6), [-3, -1.5, 0], [0, 0, PI / 2 + 0.15]), node(box(8, 1.6, 6, D), [-8, -4.5, 0]), ...eyes,
@@ -239,10 +241,10 @@
       const chest = node(sphere(15, 11, 11, R, 8, 5), [0, 20, 0]);
       const root = node(null, [0, 0, 0], [0, 0, 0], [
         wR, legs[2].n, legs[3].n, chest, node(sphere(12, 7, 9, B, 8, 5), [-2, 16, 0]), node(null, [13, 19, 0], [0, 0, -1.25], [tail[0]]),
-        node(cyl(5.5, 4.4, 15, R), [-9, 21, 0], [0, 0, 0.85]), head,
+        node(cyl(5.5, 4.4, 15, R), [-9, 21, 0], [0, 0, 0.85], [neck]), head,
         ...[-4, 2, 8].map((x, i) => node(cyl(1.8, 0, 4.5 - i * 0.6, H, 4), [x, 29 - i * 1.5, 0], [0, 0, -0.2])), legs[0].n, legs[1].n, wL, puff,
       ]);
-      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist: legs[0].w }, hs: 0.95, fs: 1.25, ws: 1.35,
+      return { root, sockets: { head: hs, feet: legs.map((l) => l.s), wrist: legs[0].w, neck }, ns: [5.4, 5.4], hs: 0.95, fs: 1.25, ws: 1.35,
         anim(t, st) {
           const f = Math.sin(t * (st.fly || st.held ? 12 : 5)) * 0.6; wL.r[0] = 0.55 + f; wR.r[0] = -0.55 - f;
           tail.forEach((s, i) => (s.r[2] = (i ? 0.25 : 0) + Math.sin(t * 2 - i) * 0.12));
@@ -274,7 +276,7 @@
     const sole = outline(11, 4.6);
     const top = (x) => 3.1 + Math.max(0, x) * 0.32 - Math.max(0, -x - 2.8) * 0.45;  // low toe, rising to the heel collar
     const stripe = (z) => node(poly([[-2.6, 1.9, z], [-0.6, 2.9, z], [2.8, 3.6, z], [3.9, 2.8, z], [1.2, 2.5, z], [-1.2, 2.0, z]], accent));
-    return node(null, [0, 0, 0], [0, 0, 0], [
+    return Object.assign(node(null, [0, 0, 0], [0, 0, 0], [
       node(extrude(sole, 0, 0.55, out)),
       node(extrude(shrink(sole, 0.98), 0.55, 1.5, mid)),
       node(extrude(shrink(sole, 0.92), 1.5, top, upper)),
@@ -283,12 +285,12 @@
       ...[-2.4, -1.5, -0.6, 0.3].map((x, i) => node(box(0.35, 0.3, 2.6, lace), [x, top(x) + 0.12, 0], [0, i % 2 ? 0.35 : -0.35, 0])),
       stripe(2.08), stripe(-2.08),
       node(box(0.6, 1.2, 1.2, tab || accent), [4.9, 3.4, 0]),  // heel tab
-    ]);
+    ]), { ankle: [3, 3.9] });
   }
   function boot({ upper = "#c8963c", dark = "#8a5a22", sole = "#4a2e14", lace = "#d8b070" }) {
     const out = outline(11.4, 4.9);
     const top = (x) => (x > -1 ? 8.2 : 3.4 - Math.max(0, -x - 3) * 0.3);
-    return node(null, [0, 0, 0], [0, 0, 0], [
+    return Object.assign(node(null, [0, 0, 0], [0, 0, 0], [
       node(extrude(out, 0, 1.3, sole)),
       ...[-4, -2, 0, 2, 4].map((x) => node(box(1, 0.5, 5.1, "#2e1c0c"), [x, 0.25, 0])),  // lugs
       node(extrude(shrink(out, 0.9), 1.3, top, upper, dark)),
@@ -297,7 +299,7 @@
       ...[2.2, 3.6, 5.0, 6.4].map((y) => node(box(0.4, 0.3, 3.2, lace), [-0.9 - (y - 2) * 0.05, y, 0], [0, 0, 0.1])),
       ...[2.2, 3.6, 5.0, 6.4].flatMap((y) => [1.55, -1.55].map((z) => node(box(0.5, 0.5, 0.5, "#e8c060"), [-0.85, y, z]))),  // eyelets
       node(poly([[-0.8, 7.8, 0], [-2.6, 9.6, 0.4], [-2.2, 10, -0.2]], lace)),  // a loose lace end
-    ]);
+    ]), { ankle: [1.8, 8.6] });
   }
   function glass(milk, extra = []) {
     return node(null, [0, 0, 0], [0, 0, 0], [
@@ -313,7 +315,7 @@
     node(cyl(0.45, 0.45, 3, c1, 6), [0, 9, 0], [0, 0, 1.2])]);
 
   const watch = (band, face, extra = []) => () => node(null, [0, 0, 0], [0, 0, 0], [
-    node(cyl(2.6, 2.6, 1.6, band, 8)), node(box(0.8, 2.8, 2.8, face), [-2.9, 0.8, 0]), ...extra,
+    node(tube(2.6, 2.6, 1.6, band, 12, 0.8)), node(box(0.8, 2.8, 2.8, face), [-2.9, 0.8, 0]), ...extra,
   ]);
   const GEAR = {
     hat_snapback: () => node(null, [0, -0.6, 0], [0, 0, 0], [
@@ -359,7 +361,7 @@
       return n;
     },
     kicks_af1: () => sneaker({ upper: "#2a2a32", mid: "#1e1e24", out: "#141418", accent: "#3e3e4a", lace: "#26262c", tab: "#1a1a20" }),
-    kicks_timbs: () => { const b = boot({}); b.s = [0.8, 0.8, 0.8]; return node(null, [0, 0, 0], [0, 0, 0], [b]); },  // boots run tall: a bit smaller so legs still show
+    kicks_timbs: () => { const b = boot({}); b.s = [0.8, 0.8, 0.8]; return Object.assign(node(null, [0, 0, 0], [0, 0, 0], [b]), { ankle: b.ankle.map((v) => v * 0.8) }); },  // boots run tall: a bit smaller so legs still show
     kicks_grinch: () => sneaker({ upper: "#7ee02a", mid: "#f0f0e8", out: "#d8d4c8", accent: "#e8243a", lace: "#f8f8f0", tab: "#e8243a" }),
     kicks_dior: () => sneaker({ upper: "#cfd3da", mid: "#f6f6f2", out: "#9aa2ac", accent: "#7c8ea4", lace: "#ffffff", tab: "#2a3a5a" }),
     milk_farm: () => glass("#f6f6f2"),
@@ -396,7 +398,7 @@
       if (e) {  // the glass stands behind his feet, under a tail or wings: measure only what is near the ground
         let g = render(null, inst.root, 0, 0, { yaw, cx: 0, cy: 0, measureOnly: true, maxY: 7 });
         if (!(g[2] > g[0])) g = bb;  // nothing low (a floating pet): use all of him
-        e[0] = Math.min(e[0], g[0] - 5 * inst.fs); e[1] = Math.max(e[1], g[2] + 5 * inst.fs);  // room for shoes
+        e[0] = Math.min(e[0], g[0] - 2 * inst.fs); e[1] = Math.max(e[1], g[2] + 2 * inst.fs);  // shoes are measured too (dress re-measures)
       }
     }
     const span = Math.max(-x0, x1);
@@ -407,10 +409,29 @@
     if (!id || !GEAR[id]) return null;
     const g = GEAR[id](); g.s = [scale, scale, scale]; socket.kids.push(g); return g;
   }
+  // a shoe slides forward so its opening sits under the leg; the leg stops at the collar (never through the shoe) and his own foot hides
+  function shoe(f, id, k) {
+    const g = attach(f, id, k), a = g && g.ankle;
+    if (a) g.p = [-a[0] * k, 0, 0];
+    if (f.foot) f.foot.s = g ? [0, 0, 0] : [1, 1, 1];
+    if (f.leg) f.leg.s[1] = a ? Math.max(0.15, (f.len - a[1] * k) / f.len) : 1;
+    return g;
+  }
+  // the same watch, its band opened up round the neck (rx, rz) and the face in front
+  function neckWatch(socket, id, [rx, rz], k) {
+    socket.kids = [];
+    if (!id || !GEAR[id]) return null;
+    const [band, ...rest] = GEAR[id]().kids;
+    band.s = [rx / 2.6, k, rz / 2.6];
+    const g = node(null, [0, 0, 0], [0, 0, 0], [band, node(null, [2.6 * k - rx, 0, 0], [0, 0, 0], rest, [k, k, k])]);
+    socket.kids.push(g); return g;
+  }
   function dress(inst, eq) {
-    const { head, feet, wrist } = inst.sockets;
-    inst.gear = [attach(head, eq.hat, inst.hs), ...feet.map((f) => attach(f, eq.shoes, inst.fs)), attach(wrist, eq.watch, inst.ws)].filter(Boolean);
+    const { head, feet, wrist, neck } = inst.sockets;
+    inst.gear = [attach(head, eq.hat, inst.hs), ...feet.map((f) => shoe(f, eq.shoes, inst.fs)), attach(wrist, eq.watch, inst.ws),
+      neck && neckWatch(neck, eq.watch, inst.ns, inst.ws)].filter(Boolean);
     inst.st.shod = !!eq.shoes;
+    measure(inst);  // shoes stick out past his toes: size the canvas round what he wears
   }
   // a leg swings by turning about z; its foot socket undoes that turn, so the sole stays level
   const level = (inst) => inst.sockets.feet.forEach((f) => { if (f.level) f.r[2] = f.level.r[2]; });
