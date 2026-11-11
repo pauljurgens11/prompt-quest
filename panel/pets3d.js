@@ -388,11 +388,12 @@
   // ext.l / ext.r: how far the pet reaches left and right of its centre when facing left / right (for the milk glass)
   function measure(inst) {
     let x0 = Infinity, x1 = -Infinity, top = 0;
-    inst.ext = { l: [Infinity, -Infinity], r: [Infinity, -Infinity] };
+    inst.ext = { l: [Infinity, -Infinity], r: [Infinity, -Infinity] }; inst.full = [Infinity, -Infinity];
     for (const yaw of [0.5, PI - 0.5, PI / 2, 0]) for (const t of [0, 0.3, 0.7, 1.1, 1.6]) {
       inst.anim(t, {});
       const bb = render(null, inst.root, 0, 0, { yaw, cx: 0, cy: 0, measureOnly: true });
       x0 = Math.min(x0, bb[0]); x1 = Math.max(x1, bb[2]); top = Math.min(top, bb[1]);
+      if (yaw === 0.5 || yaw === PI - 0.5) { inst.full[0] = Math.min(inst.full[0], bb[0]); inst.full[1] = Math.max(inst.full[1], bb[2]); }
       const e = yaw === 0.5 ? inst.ext.l : yaw === PI - 0.5 ? inst.ext.r : null;
       if (e) {  // the glass stands behind his feet, under a tail or wings: measure only what is near the ground
         let g = render(null, inst.root, 0, 0, { yaw, cx: 0, cy: 0, measureOnly: true, maxY: 7 });
@@ -401,7 +402,9 @@
       }
     }
     const span = Math.max(-x0, x1);
+    inst.reach = Math.max(-inst.full[0], inst.full[1]);  // how far he reaches either side in the views the room uses
     inst.W = Math.ceil(span * 2 + 6); inst.H = Math.ceil(-top + 11 * inst.hs + 3); inst.cx = inst.W / 2;
+    inst.head = inst.H + top;  // empty rows above his drawing (room for a hat he may not wear)
   }
   function attach(socket, id, scale) {
     socket.kids = [];

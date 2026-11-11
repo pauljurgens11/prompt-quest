@@ -48,6 +48,8 @@
   // ---------- state of the scene ----------
   const G = { x: 60, y: 0, vy: 0, vx: 0, tx: 60, rot: 0, rotTo: 0, held: false, flying: false, down: false, hardest: 0, face: "smile", squash: 0, next: 0, look: null, blinkAt: 0, busy: 0, lastFrame: 0, knock: 0 };
   const W = () => $("room").clientWidth;
+  // how far he may go: his whole drawing (tail, wings, shoes) stays inside the room, not just the body you grab
+  const LO = () => (G.p3 ? Math.max(0, G.p3.reach * G.ds + 4 - GW / 2) : 0), HI = () => W() - GW - LO();
   let GW = 46, GH = 46;
   const FLOOR = 12;  // the floor strip's top: feet and the glass stand on it, not sunk into it  // his size: the blob's, or the equipped pet's
 
@@ -152,14 +154,16 @@
     requestAnimationFrame(frame);
     if (document.body.classList.contains("compact")) return;
     const dt = Math.min(0.05, (now - (G.lastFrame || now)) / 1000); G.lastFrame = now;
-    const room = W() - GW;
-    if (room <= 0) return;  // the room is not laid out yet (page still loading)
-    if (!G.placed) { G.placed = true; G.x = G.tx = room / 2; }  // he starts in the middle of his room
-    if (now > G.next && !G.busy && !G.held && !G.flying && !G.down) decide(now, room);
+    const lo = LO(), room = HI();
+    if (W() - GW <= 0) return;  // the room is not laid out yet (page still loading)
+    if (room < lo) { G.x = G.tx = (lo + room) / 2; }  // wider than the room: he stays in the middle
+    if (!G.placed) { G.placed = true; G.x = G.tx = (lo + room) / 2; }  // he starts in the middle of his room
+    if (now > G.next && !G.busy && !G.held && !G.flying && !G.down) decide(now, lo, room);
     if (G.held) { /* follows your pointer (see carry) */ }
-    else if (G.flying) fly(dt, room);
+    else if (G.flying) fly(dt, lo, room);
     else if (!G.down) walk(dt, now);
-    if (!(G.x >= 0 && G.x <= room)) G.x = Number.isFinite(G.x) ? Math.max(0, Math.min(room, G.x)) : room / 2;  // never outside his room
+    if (!(G.x >= lo && G.x <= room) && room >= lo) G.x = Number.isFinite(G.x) ? Math.max(lo, Math.min(room, G.x)) : (lo + room) / 2;  // never outside his room
+    G.tx = Math.max(lo, Math.min(Math.max(lo, room), G.tx));
     if (!(G.y >= 0)) G.y = 0;
     G.squash = Math.max(0, G.squash - dt * 6);
     G.rot += (G.rotTo - G.rot) * Math.min(1, dt * 12);
@@ -197,11 +201,11 @@
     }
   }
   // thrown: flies, bounces off walls, ceiling and floor; a hard landing knocks him over
-  const ceiling = () => $("room").clientHeight - FLOOR - GH * (G.p3 ? 0.55 : 1);  // a 3D pet's canvas has headroom for hats and wings
-  function fly(dt, room) {
+  const ceiling = () => Math.max(0, $("room").clientHeight - FLOOR - GH + (G.p3 ? G.p3.head * G.ds : 0) - 2);  // his whole drawing, hat and wings too, stays below the top
+  function fly(dt, lo, room) {
     G.vy -= 700 * dt; G.x += G.vx * dt; G.y += G.vy * dt;
     G.rotTo = Math.max(-40, Math.min(40, G.vx * 0.06));
-    if (G.x < 0 || G.x > room) { G.x = Math.max(0, Math.min(room, G.x)); G.hardest = Math.max(G.hardest, Math.abs(G.vx)); G.vx = -G.vx * 0.55; bonk(); }
+    if (G.x < lo || G.x > room) { G.x = Math.max(lo, Math.min(room, G.x)); G.hardest = Math.max(G.hardest, Math.abs(G.vx)); G.vx = -G.vx * 0.55; bonk(); }
     if (G.y > ceiling()) { G.y = ceiling(); G.vy = -Math.abs(G.vy) * 0.4; bonk(); }
     if (G.y <= 0) {
       G.y = 0; G.hardest = Math.max(G.hardest, -G.vy); G.squash = 1;
@@ -358,14 +362,14 @@
     }, 1400);
   }
 
-  function decide(now, room) {
+  function decide(now, lo, room) {
     const r = Math.random();
     G.next = now + rnd(4000, 9000);  // mostly he just stands there and breathes
     if (r < 0.1) { jump(130); return; }
     if (r < 0.18) { flex(); return; }
     if (r < 0.6) {  // a stroll to anywhere in the room, at least a few steps away
-      let t = rnd(0, room);
-      if (Math.abs(t - G.x) < 25) t = G.x < room / 2 ? Math.min(room, G.x + rnd(25, 60)) : Math.max(0, G.x - rnd(25, 60));
+      let t = rnd(lo, room);
+      if (Math.abs(t - G.x) < 25) t = G.x < (lo + room) / 2 ? Math.min(room, G.x + rnd(25, 60)) : Math.max(lo, G.x - rnd(25, 60));
       G.tx = t;
     }
   }
@@ -422,10 +426,12 @@
     say("lift", 2000);
   }
   function place(cx, cy) {
-    const r = $("room").getBoundingClientRect(), room = W() - GW;
-    G.x = Math.max(0, Math.min(room, cx - r.left - GW / 2));
-    G.y = Math.max(0, Math.min(ceiling(), r.bottom - FLOOR - (cy + GH * (G.p3 ? 0.3 : 0.5))));  // you hold him by the body
-    G.rotTo = Math.max(-35, Math.min(35, -velocity()[0] * 0.05));  // he dangles behind your hand
+    const r = $("room").getBoundingClientRect(), lo = LO(), room = Math.max(lo, HI());
+    G.x = Math.max(lo, Math.min(room, cx - r.left - GW / 2));
+    const tilt = G.p3 ? 12 : 35;  // a long 3D pet tilts less: his tail and wings would swing out of the room
+    G.rotTo = Math.max(-tilt, Math.min(tilt, -velocity()[0] * 0.05));  // he dangles behind your hand
+    const swing = G.p3 ? G.p3.reach * G.ds * Math.sin(((tilt + 4) * Math.PI) / 180) : 0;  // the room his tilt needs above him
+    G.y = Math.max(0, Math.min(ceiling() - swing, r.bottom - FLOOR - (cy + GH * (G.p3 ? 0.3 : 0.5))));  // you hold him by the body
   }
   function track(x, y) {
     const now = performance.now();
